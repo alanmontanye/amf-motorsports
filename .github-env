@@ -1,0 +1,10 @@
+# GitHub Configuration
+# Fill in your GitHub username and email
+
+# GitHub Authentication
+GITHUB_USERNAME=alanmontanye
+GITHUB_EMAIL=montanyealan@gmail.com
+
+# Repository Information
+GITHUB_REPO_NAME=amf-motorsports
+GITHUB_REPO_URL=https://github.com/alanmontanye/amf-motorsports.git

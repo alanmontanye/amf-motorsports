@@ -1,0 +1,13 @@
+# GitHub Configuration Template
+# Copy this file to .github-env and fill in your values
+
+# GitHub Authentication
+GITHUB_USERNAME=your-github-username
+GITHUB_EMAIL=your-github-email@example.com
+
+# Repository Information
+GITHUB_REPO_NAME=amf-motorsports
+GITHUB_REPO_URL=https://github.com/your-username/amf-motorsports.git
+
+# For GitHub actions or automated deployments
+# GITHUB_TOKEN=your-personal-access-token  # Uncomment if needed

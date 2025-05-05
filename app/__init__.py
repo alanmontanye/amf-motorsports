@@ -30,6 +30,10 @@ def create_app(config_name=None):
 
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
+    
+    # Register the initialization blueprint
+    from app.admin.init_routes import init_bp
+    app.register_blueprint(init_bp, url_prefix='/admin')
 
     from app.reports import bp as reports_bp
     app.register_blueprint(reports_bp)
