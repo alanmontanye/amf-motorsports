@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Inventory Reports</h1>
+        </div>
+    </div>
+
+    <!-- Inventory Summary -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Inventory Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Parts</h6>
+                                    <h3 class="mb-0">{{ total_parts }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">In Stock</h6>
+                                    <h3 class="mb-0">{{ parts_in_stock }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body">
+                                    <h6 class="card-title">Listed</h6>
+                                    <h3 class="mb-0">{{ parts_listed }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Sold</h6>
+                                    <h3 class="mb-0">{{ parts_sold }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Current Inventory Value</h6>
+                                    <h3 class="text-primary">${{ "%.2f"|format(inventory_value) }}</h3>
+                                    <small class="text-muted">Based on list prices of in-stock and listed parts</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATV Breakdown -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">ATV Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ATV</th>
+                                    <th>Total Parts</th>
+                                    <th>Parts Sold</th>
+                                    <th>Completion</th>
+                                    <th>Total Earnings</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for atv in atv_stats %}
+                                <tr>
+                                    <td>{{ atv.name }}</td>
+                                    <td>{{ atv.total_parts }}</td>
+                                    <td>{{ atv.parts_sold }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {{ atv.completion }}%"
+                                                 aria-valuenow="{{ atv.completion }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ "%.1f"|format(atv.completion) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${{ "%.2f"|format(atv.total_earnings) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">Welcome to AMF Motorsports</h1>
+            <p class="lead">Manage your ATVs, parts inventory, and track your business performance.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">ATVs</h5>
+                            <p class="card-text">Manage your ATV inventory, track expenses, and monitor profits for each vehicle.</p>
+                            <a href="{{ url_for('atv.index') }}" class="btn btn-primary">View ATVs</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Parts</h5>
+                            <p class="card-text">Track parts inventory, manage listings, and monitor parts sales across all platforms.</p>
+                            <a href="{{ url_for('atv.parts_list') }}" class="btn btn-primary">View Parts</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Reports & Logs</h5>
+                            <p class="card-text">View financial reports, export data, and manage transaction logs for accounting.</p>
+                            <a href="{{ url_for('atv.reports') }}" class="btn btn-primary">View Reports</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Quick Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <h6>Active ATVs</h6>
+                                    <p class="h3">{{ stats.active_atvs }}</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Parts in Stock</h6>
+                                    <p class="h3">{{ stats.parts_in_stock }}</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Listed Parts</h6>
+                                    <p class="h3">{{ stats.listed_parts }}</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <h6>Monthly Profit</h6>
+                                    <p class="h3">${{ "%.2f"|format(stats.monthly_profit) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

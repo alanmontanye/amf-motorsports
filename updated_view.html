@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>{{ atv.year }} {{ atv.make }} {{ atv.model }}</h1>
+            <p class="text-muted">
+                Status: 
+                <span class="badge {% if atv.status == 'parting_out' %}bg-warning{% else %}bg-secondary{% endif %}">
+                    {{ atv.status|replace('_', ' ')|title }}
+                </span>
+            </p>
+        </div>
+        <div class="btn-group">
+            {% if atv.status == 'parting_out' %}
+            <a href="{{ url_for('atv.atv_parts', atv_id=atv.id) }}" class="btn btn-info">View Parts</a>
+            {% endif %}
+            <a href="{{ url_for('atv.atv_images', id=atv.id) }}" class="btn btn-primary">
+                <i class="fas fa-images"></i> Images
+            </a>
+            <a href="{{ url_for('atv.edit_atv', id=atv.id) }}" class="btn btn-warning">Edit</a>
+            <form action="{{ url_for('atv.delete_atv', id=atv.id) }}" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this ATV?')">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Financial Summary Card -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Financial Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Purchase Price:</strong> ${{ "%.2f"|format(atv.purchase_price) }}</p>
+                    <p><strong>Total Expenses:</strong> ${{ "%.2f"|format(atv.total_expenses()) }}</p>
+                    <p><strong>Total Sales:</strong> ${{ "%.2f"|format(atv.total_sales()) }}</p>
+                    <hr>
+                    <p class="h5">
+                        <strong>Net Profit/Loss:</strong> 
+                        <span class="{% if atv.profit_loss() > 0 %}text-success{% else %}text-danger{% endif %}">
+                            ${{ "%.2f"|format(atv.profit_loss()) }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Time Investment Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Time Investment</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Acquisition Hours:</strong> {{ "%.1f"|format(atv.acquisition_hours or 0) }}</p>
+                    <p><strong>Repair Hours:</strong> {{ "%.1f"|format(atv.repair_hours or 0) }}</p>
+                    <p><strong>Selling Hours:</strong> {{ "%.1f"|format(atv.selling_hours or 0) }}</p>
+                    <hr>
+                    <p class="h5"><strong>Total Hours:</strong> {{ "%.1f"|format(atv.total_hours or 0) }}</p>
+                    {% if atv.total_hours > 0 %}
+                    <hr>
+                    <p><strong>Hourly Profit Rate:</strong> 
+                        <span class="{% if atv.hourly_profit_rate() > 0 %}text-success{% else %}text-danger{% endif %}">
+                            ${{ "%.2f"|format(atv.hourly_profit_rate()) }}/hr
+                        </span>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Card -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">ATV Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Make:</strong> {{ atv.make }}</p>
+                            <p><strong>Model:</strong> {{ atv.model }}</p>
+                            <p><strong>Year:</strong> {{ atv.year }}</p>
+                            {% if atv.vin %}
+                            <p><strong>VIN:</strong> {{ atv.vin }}</p>
+                            {% endif %}
+                            <p><strong>Status:</strong> {{ atv.status|replace('_', ' ')|title }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Purchase Date:</strong> {{ atv.purchase_date.strftime('%Y-%m-%d') }}</p>
+                            <p><strong>Purchase Location:</strong> {{ atv.purchase_location or 'Not specified' }}</p>
+                            <p><strong>Added:</strong> {{ atv.created_at.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </div>
+                    {% if atv.description %}
+                    <div class="mt-3">
+                        <h6>Notes:</h6>
+                        <p>{{ atv.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Images Preview Section (if images exist) -->
+    {% if atv.images.all() %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Images</h5>
+            <a href="{{ url_for('atv.atv_images', id=atv.id) }}" class="btn btn-primary btn-sm">Manage Images</a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for image in atv.images.all() %}
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        <img src="{{ url_for('atv.image_file', filename=image.filename) }}" class="card-img-top" alt="{{ atv.make }} {{ atv.model }} image">
+                        {% if image.description %}
+                        <div class="card-footer">
+                            <small class="text-muted">{{ image.description }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rest of your template content... -->
+</div>
+{% endblock %}

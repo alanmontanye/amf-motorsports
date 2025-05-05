@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2>{{ title }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <!-- Basic Information -->
+                    <div class="col-md-4 mb-3">
+                        <h4>Basic Information</h4>
+                        <div class="form-group mb-3">
+                            {{ form.make.label(class="form-label") }}
+                            {{ form.make(class="form-control") }}
+                            {% for error in form.make.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.model.label(class="form-label") }}
+                            {{ form.model(class="form-control") }}
+                            {% for error in form.model.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.year.label(class="form-label") }}
+                            {{ form.year(class="form-control") }}
+                            {% for error in form.year.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.vin.label(class="form-label") }}
+                            {{ form.vin(class="form-control") }}
+                            {% for error in form.vin.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-select") }}
+                            {% for error in form.status.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Purchase Information -->
+                    <div class="col-md-4 mb-3">
+                        <h4>Purchase Information</h4>
+                        <div class="form-group mb-3">
+                            {{ form.purchase_date.label(class="form-label") }}
+                            {{ form.purchase_date(class="form-control", type="date") }}
+                            {% for error in form.purchase_date.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.purchase_price.label(class="form-label") }}
+                            {{ form.purchase_price(class="form-control") }}
+                            {% for error in form.purchase_price.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.purchase_location.label(class="form-label") }}
+                            {{ form.purchase_location(class="form-control") }}
+                            {% for error in form.purchase_location.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=5) }}
+                            {% for error in form.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Hours Tracking -->
+                    <div class="col-md-4 mb-3">
+                        <h4>Time Investment</h4>
+                        <div class="form-group mb-3">
+                            {{ form.acquisition_hours.label(class="form-label") }}
+                            {{ form.acquisition_hours(class="form-control") }}
+                            <small class="form-text text-muted">Hours spent acquiring this ATV</small>
+                            {% for error in form.acquisition_hours.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.repair_hours.label(class="form-label") }}
+                            {{ form.repair_hours(class="form-control") }}
+                            <small class="form-text text-muted">Hours spent on repairs/maintenance</small>
+                            {% for error in form.repair_hours.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.selling_hours.label(class="form-label") }}
+                            {{ form.selling_hours(class="form-control") }}
+                            <small class="form-text text-muted">Hours spent on listing/selling</small>
+                            {% for error in form.selling_hours.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3 mt-3 text-center">
+                    {{ form.submit(class="btn btn-primary") }}
+                    {% if atv %}
+                        <a href="{{ url_for('atv.view_atv', id=atv.id) }}" class="btn btn-secondary">Cancel</a>
+                    {% else %}
+                        <a href="{{ url_for('atv.index') }}" class="btn btn-secondary">Cancel</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

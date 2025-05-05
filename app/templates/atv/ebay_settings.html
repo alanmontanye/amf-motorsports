@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% from 'bootstrap5/form.html' import render_form %}
+
+{% block title %}eBay Settings{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">eBay Integration Settings</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">eBay API Configuration</h5>
+                </div>
+                <div class="card-body">
+                    {% if settings.is_active and settings.access_token %}
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle"></i> eBay integration is active and authenticated.
+                            {% if settings.token_expiry %}
+                                <div class="small">
+                                    Token expires: {{ settings.token_expiry.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% elif settings.is_active %}
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle"></i> eBay integration is configured but not authenticated.
+                            {% if auth_link %}
+                                <div class="mt-2">
+                                    <a href="{{ auth_link }}" class="btn btn-sm btn-warning">
+                                        <i class="fas fa-key"></i> Authorize with eBay
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary mb-3">
+                            <i class="fas fa-info-circle"></i> eBay integration is disabled. Configure and enable it below.
+                        </div>
+                    {% endif %}
+                    
+                    {{ render_form(form) }}
+                </div>
+                <div class="card-footer">
+                    <div class="small text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        You will need to register for an eBay developer account to get your API credentials.
+                        <a href="https://developer.ebay.com/api-docs/static/oauth-client-credentials-grant.html" target="_blank">
+                            Learn more <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Integration Status</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Environment
+                            <span class="badge {% if settings.environment == 'sandbox' %}bg-warning{% else %}bg-success{% endif %} rounded-pill">
+                                {{ settings.environment|capitalize }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Authentication
+                            <span class="badge {% if settings.access_token %}bg-success{% else %}bg-danger{% endif %} rounded-pill">
+                                {% if settings.access_token %}Authenticated{% else %}Not Authenticated{% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Credentials
+                            <span class="badge {% if settings.client_id and settings.client_secret %}bg-success{% else %}bg-danger{% endif %} rounded-pill">
+                                {% if settings.client_id and settings.client_secret %}Configured{% else %}Missing{% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Last Sync
+                            <span class="badge bg-secondary rounded-pill">
+                                {% if settings.last_sync %}
+                                    {{ settings.last_sync.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for('atv.ebay_templates') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-alt"></i> Manage Listing Templates
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action disabled">
+                            <i class="fas fa-sync"></i> Synchronize Listings
+                            <span class="badge bg-secondary float-end">Coming Soon</span>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action disabled">
+                            <i class="fas fa-chart-line"></i> eBay Analytics
+                            <span class="badge bg-secondary float-end">Coming Soon</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

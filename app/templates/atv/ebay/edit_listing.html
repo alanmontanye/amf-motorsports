@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Edit eBay Listing</h1>
+            <h4>Part: {{ part.name }}</h4>
+            <p>From: {{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.title.label }}</label>
+                            {{ form.title(class="form-control", maxlength="80") }}
+                            <div class="form-text">{{ form.title.description }}</div>
+                            {% for error in form.title.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.condition.label }}</label>
+                                    {{ form.condition(class="form-select") }}
+                                    {% for error in form.condition.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.category.label }}</label>
+                                    {{ form.category(class="form-control") }}
+                                    <div class="form-text">{{ form.category.description }}</div>
+                                    {% for error in form.category.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.condition_description.label }}</label>
+                            {{ form.condition_description(class="form-control", rows=3) }}
+                            <div class="form-text">{{ form.condition_description.description }}</div>
+                            {% for error in form.condition_description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Pricing & Format</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.format.label }}</label>
+                                    {{ form.format(class="form-select") }}
+                                    {% for error in form.format.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.duration.label }}</label>
+                                    {{ form.duration(class="form-select") }}
+                                    {% for error in form.duration.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.price.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.price(class="form-control") }}
+                                    </div>
+                                    <div class="form-text">{{ form.price.description }}</div>
+                                    {% for error in form.price.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.reserve_price.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.reserve_price(class="form-control") }}
+                                    </div>
+                                    <div class="form-text">{{ form.reserve_price.description }}</div>
+                                    {% for error in form.reserve_price.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Description</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.description.label }}</label>
+                            {{ form.description(class="form-control", rows=8) }}
+                            {% for error in form.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Shipping</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    {{ form.free_shipping(class="form-check-input") }}
+                                    <label class="form-check-label">{{ form.free_shipping.label }}</label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    {{ form.calculated_shipping(class="form-check-input") }}
+                                    <label class="form-check-label">{{ form.calculated_shipping.label }}</label>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.shipping_cost.label }}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {{ form.shipping_cost(class="form-control") }}
+                                    </div>
+                                    <div class="form-text">{{ form.shipping_cost.description }}</div>
+                                    {% for error in form.shipping_cost.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.handling_time.label }}</label>
+                                    {{ form.handling_time(class="form-select") }}
+                                    {% for error in form.handling_time.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.return_policy.label }}</label>
+                                    {{ form.return_policy(class="form-select") }}
+                                    {% for error in form.return_policy.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="calculatedShippingFields">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.package_weight.label }}</label>
+                                    <div class="input-group">
+                                        {{ form.package_weight(class="form-control") }}
+                                        <span class="input-group-text">lbs</span>
+                                    </div>
+                                    <div class="form-text">{{ form.package_weight.description }}</div>
+                                    {% for error in form.package_weight.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">{{ form.package_dimensions.label }}</label>
+                                    {{ form.package_dimensions(class="form-control") }}
+                                    <div class="form-text">{{ form.package_dimensions.description }}</div>
+                                    {% for error in form.package_dimensions.errors %}
+                                        <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+                    <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update eBay Listing</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Part Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ part.name }}</p>
+                    <p><strong>Part Number:</strong> {{ part.part_number or 'N/A' }}</p>
+                    <p><strong>Condition:</strong> {{ part.condition|replace('_', ' ')|title }}</p>
+                    <p><strong>Current List Price:</strong> ${{ "%.2f"|format(part.list_price) if part.list_price else 'N/A' }}</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Listing Status</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Status:</strong> {{ listing.status|title }}</p>
+                    
+                    <div class="d-grid gap-2">
+                        <form action="{{ url_for('atv.end_ebay_listing', listing_id=listing.id) }}" method="POST">
+                            <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Are you sure you want to end this eBay listing?')">
+                                End Listing
+                            </button>
+                        </form>
+                        
+                        <a href="{{ url_for('atv.mark_listing_sold', listing_id=listing.id) }}" class="btn btn-success w-100">
+                            Mark As Sold
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if part.images.count() > 0 %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Images Available for Listing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for image in part.images %}
+                        <div class="col-6 mb-3">
+                            <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" class="img-fluid rounded" alt="{{ part.name }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <strong>Warning:</strong> No images available for this part. It's recommended to add images for your eBay listing.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Toggle visibility of calculated shipping fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const calculatedShippingCheck = document.getElementById('calculated_shipping');
+        const calculatedShippingFields = document.getElementById('calculatedShippingFields');
+        const freeShippingCheck = document.getElementById('free_shipping');
+        const shippingCostField = document.getElementById('shipping_cost');
+        
+        function updateFieldVisibility() {
+            if (calculatedShippingCheck.checked) {
+                calculatedShippingFields.style.display = 'flex';
+                shippingCostField.parentElement.parentElement.style.display = 'none';
+            } else {
+                calculatedShippingFields.style.display = 'none';
+                if (!freeShippingCheck.checked) {
+                    shippingCostField.parentElement.parentElement.style.display = 'block';
+                }
+            }
+            
+            if (freeShippingCheck.checked) {
+                shippingCostField.parentElement.parentElement.style.display = 'none';
+            } else if (!calculatedShippingCheck.checked) {
+                shippingCostField.parentElement.parentElement.style.display = 'block';
+            }
+        }
+        
+        calculatedShippingCheck.addEventListener('change', updateFieldVisibility);
+        freeShippingCheck.addEventListener('change', updateFieldVisibility);
+        
+        // Initial check
+        updateFieldVisibility();
+    });
+</script>
+{% endblock %}
+{% endblock %}

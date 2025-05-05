@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block title %}eBay Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">eBay Analytics Dashboard</h1>
+    
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> This dashboard will show real performance metrics when integrated with the eBay API. Currently showing placeholder data.
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4" id="active-listings">--</h2>
+                    <h6>Active Listings</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4" id="sold-listings">--</h2>
+                    <h6>Sold (Last 30 Days)</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4" id="avg-price">--</h2>
+                    <h6>Avg Sale Price</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h2 class="display-4" id="success-rate">--</h2>
+                    <h6>Success Rate</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Sales Performance</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sales-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Average Days to Sell</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="time-to-sell-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Top Performing Categories</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Items Sold</th>
+                                    <th>Average Price</th>
+                                    <th>Total Revenue</th>
+                                    <th>Avg. Days to Sell</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Engine Parts</td>
+                                    <td>5</td>
+                                    <td>$85.99</td>
+                                    <td>$429.95</td>
+                                    <td>3.2</td>
+                                </tr>
+                                <tr>
+                                    <td>Body Panels</td>
+                                    <td>3</td>
+                                    <td>$64.50</td>
+                                    <td>$193.50</td>
+                                    <td>4.5</td>
+                                </tr>
+                                <tr>
+                                    <td>Suspension</td>
+                                    <td>2</td>
+                                    <td>$112.25</td>
+                                    <td>$224.50</td>
+                                    <td>7.1</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <i class="fas fa-info-circle"></i> These are placeholder values. Real data will be shown when integrated with eBay API.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch performance metrics
+    fetch('/api/ebay/analytics/performance')
+        .then(response => response.json())
+        .then(data => {
+            // Update dashboard metrics
+            document.getElementById('active-listings').textContent = data.active_count;
+            document.getElementById('sold-listings').textContent = data.sold_count;
+            document.getElementById('avg-price').textContent = '$' + data.avg_sale_price;
+            document.getElementById('success-rate').textContent = data.success_rate + '%';
+            
+            // Initialize charts with real or placeholder data
+            initSalesChart();
+            initTimeToSellChart();
+        })
+        .catch(error => {
+            console.error('Error fetching metrics:', error);
+            // Use placeholder data if fetch fails
+            document.getElementById('active-listings').textContent = '10';
+            document.getElementById('sold-listings').textContent = '8';
+            document.getElementById('avg-price').textContent = '$75';
+            document.getElementById('success-rate').textContent = '80%';
+            
+            // Initialize charts with placeholder data
+            initSalesChart();
+            initTimeToSellChart();
+        });
+    
+    function initSalesChart() {
+        const ctx = document.getElementById('sales-chart').getContext('2d');
+        
+        // Placeholder data - will be replaced with real data
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const salesData = [2, 5, 3, 7, 4, 8];
+        const revenueData = [125, 320, 240, 550, 320, 640];
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Items Sold',
+                        data: salesData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Revenue ($)',
+                        data: revenueData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        type: 'line',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Items Sold'
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function initTimeToSellChart() {
+        const ctx = document.getElementById('time-to-sell-chart').getContext('2d');
+        
+        // Placeholder data - will be replaced with real data
+        const categories = ['Engine', 'Body', 'Suspension', 'Electrical', 'Other'];
+        const daysToSell = [3.2, 4.5, 7.1, 5.8, 8.2];
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    label: 'Average Days to Sell',
+                    data: daysToSell,
+                    backgroundColor: 'rgba(255, 159, 64, 0.5)',
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Days'
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{
+  "atvs": [
+    {
+      "id": 1,
+      "make": "Polaris",
+      "model": "Trailblazer 250",
+      "year": 2000,
+      "vin": "",
+      "status": "active",
+      "purchase_date": "2023-07-21",
+      "purchase_price": 250.0,
+      "purchase_location": "Coralville, IA",
+      "description": "",
+      "total_earnings": 0.0,
+      "acquisition_hours": 5.5,
+      "repair_hours": 10.0,
+      "selling_hours": 2.5,
+      "total_hours": 18.0,
+      "created_at": "2025-03-10 21:55:47",
+      "updated_at": "2025-03-10 21:55:47"
+    },
+    {
+      "id": 2,
+      "make": "Kawasaki",
+      "model": "Brute Force 650",
+      "year": 2006,
+      "vin": "",
+      "status": "parting_out",
+      "purchase_date": "2024-06-18",
+      "purchase_price": 500.0,
+      "purchase_location": "Des Moines, IA",
+      "description": "",
+      "total_earnings": 0.0,
+      "acquisition_hours": 5.5,
+      "repair_hours": 10.0,
+      "selling_hours": 2.5,
+      "total_hours": 18.0,
+      "created_at": "2025-03-10 21:55:47",
+      "updated_at": "2025-03-10 21:55:47"
+    },
+    {
+      "id": 3,
+      "make": "Can Am ",
+      "model": "Outlander 1000",
+      "year": 2014,
+      "vin": "",
+      "status": "active",
+      "purchase_date": "2025-03-08",
+      "purchase_price": 2000.0,
+      "purchase_location": "Hustisford, WI",
+      "description": "",
+      "total_earnings": 0.0,
+      "acquisition_hours": 5.5,
+      "repair_hours": 10.0,
+      "selling_hours": 2.5,
+      "total_hours": 18.0,
+      "created_at": "2025-03-10 21:55:47",
+      "updated_at": "2025-03-10 21:55:47"
+    }
+  ],
+  "parts": [
+    {
+      "id": 1,
+      "name": "Cylinder Head",
+      "part_number": "0001",
+      "condition": "used_good",
+      "location": "",
+      "storage_id": 1,
+      "status": "in_stock",
+      "source_price": 0.0,
+      "list_price": null,
+      "sold_price": null,
+      "sold_date": null,
+      "shipping_cost": null,
+      "platform_fees": null,
+      "platform": null,
+      "listing_url": null,
+      "atv_id": 2,
+      "description": "",
+      "created_at": "2025-03-10 21:55:47",
+      "updated_at": "2025-03-10 21:55:47"
+    }
+  ],
+  "images": [],
+  "storages": [
+    {
+      "id": 1,
+      "name": "Tote 1",
+      "description": "",
+      "created_at": "2025-03-10 23:11:32",
+      "updated_at": "2025-03-10 23:11:32"
+    },
+    {
+      "id": 2,
+      "name": "Tote 2",
+      "description": "",
+      "created_at": "2025-03-10 23:11:40",
+      "updated_at": "2025-03-10 23:11:40"
+    }
+  ],
+  "expenses": [
+    {
+      "id": 1,
+      "date": "2025-03-08 00:00:00",
+      "amount": 65.0,
+      "category": "gas",
+      "description": "",
+      "atv_id": 3,
+      "created_at": "2025-03-10 21:55:47"
+    },
+    {
+      "id": 2,
+      "date": "2025-03-08 00:00:00",
+      "amount": 43.0,
+      "category": "repairs",
+      "description": "Seat Cover",
+      "atv_id": 3,
+      "created_at": "2025-03-10 21:55:47"
+    },
+    {
+      "id": 3,
+      "date": "2025-03-08 00:00:00",
+      "amount": 45.0,
+      "category": "repairs",
+      "description": "Gasket Kit",
+      "atv_id": 3,
+      "created_at": "2025-03-10 21:55:47"
+    },
+    {
+      "id": 4,
+      "date": "2025-03-07 00:00:00",
+      "amount": 250.0,
+      "category": "repairs",
+      "description": "Used Crankshaft",
+      "atv_id": 3,
+      "created_at": "2025-03-10 21:55:47"
+    }
+  ],
+  "sales": []
+}

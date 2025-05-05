@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}eBay Templates{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>eBay Listing Templates</h1>
+        <a href="{{ url_for('atv.create_ebay_template') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create Template
+        </a>
+    </div>
+    
+    {% if templates %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for template in templates %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">{{ template.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ template.description or 'No description available' }}</p>
+                            
+                            <div class="small text-muted mb-2">
+                                <div><strong>Default Category:</strong> {{ template.default_category_id or 'None' }}</div>
+                                <div><strong>Last Updated:</strong> {{ template.updated_at.strftime('%Y-%m-%d') }}</div>
+                            </div>
+                        </div>
+                        <div class="card-footer d-flex justify-content-between">
+                            <a href="#" class="btn btn-sm btn-outline-primary disabled">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="btn btn-sm btn-outline-secondary disabled">
+                                <i class="fas fa-eye"></i> Preview
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="text-muted mb-3">No templates available yet</h5>
+                <p>Create your first template to speed up listing creation.</p>
+                <a href="{{ url_for('atv.create_ebay_template') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Template
+                </a>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-6 offset-md-3">
+                <div class="card bg-light">
+                    <div class="card-header">
+                        <h5 class="mb-0">About eBay Templates</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Templates allow you to create reusable layouts for your eBay listings, including:</p>
+                        <ul>
+                            <li>Professional HTML descriptions</li>
+                            <li>Standardized shipping policies</li>
+                            <li>Default return policies</li>
+                            <li>Pre-selected eBay categories</li>
+                        </ul>
+                        <p>By using templates, you can maintain consistent branding and save time when creating new listings.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{{ url_for('atv.ebay_settings') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to eBay Settings
+        </a>
+    </div>
+</div>
+{% endblock %}

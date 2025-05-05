@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Financial Reports</h1>
+        </div>
+    </div>
+
+    <!-- Overall Summary -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Overall Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Revenue</h6>
+                                    <h3 class="mb-0">${{ "%.2f"|format(total_revenue) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Costs</h6>
+                                    <h3 class="mb-0">${{ "%.2f"|format(total_costs) }}</h3>
+                                    <small>
+                                        Parts: ${{ "%.2f"|format(total_parts_cost) }}<br>
+                                        Shipping: ${{ "%.2f"|format(total_shipping) }}<br>
+                                        Fees: ${{ "%.2f"|format(total_fees) }}<br>
+                                        General Expenses: ${{ "%.2f"|format(total_expenses) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Profit</h6>
+                                    <h3 class="mb-0">${{ "%.2f"|format(total_profit) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Categories -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Expense Categories</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Total Amount</th>
+                                    <th>Percentage of Total Expenses</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in expense_categories %}
+                                <tr>
+                                    <td>{{ category.category }}</td>
+                                    <td>${{ "%.2f"|format(category.total) }}</td>
+                                    <td>
+                                        {% if total_expenses > 0 %}
+                                            {{ "%.1f"|format((category.total / total_expenses) * 100) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Breakdown -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Monthly Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Revenue</th>
+                                    <th>Part Costs</th>
+                                    <th>General Expenses</th>
+                                    <th>Total Costs</th>
+                                    <th>Profit</th>
+                                    <th>Profit Margin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in months %}
+                                <tr>
+                                    <td>{{ month.month }}</td>
+                                    <td>${{ "%.2f"|format(month.revenue) }}</td>
+                                    <td>${{ "%.2f"|format(month.parts_cost) }}</td>
+                                    <td>${{ "%.2f"|format(month.expenses) }}</td>
+                                    <td>${{ "%.2f"|format(month.total_costs) }}</td>
+                                    <td>${{ "%.2f"|format(month.profit) }}</td>
+                                    <td>
+                                        {% if month.revenue > 0 %}
+                                            {{ "%.1f"|format((month.profit / month.revenue) * 100) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

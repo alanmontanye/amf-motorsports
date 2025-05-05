@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Admin Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Data Management Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Data Management</h5>
+                    <div>
+                        <a href="{{ url_for('admin.create_backup') }}" class="btn btn-primary">Create Backup</a>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#uploadBackupModal">
+                            Upload Backup
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if backups %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Size</th>
+                                    <th>Modified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr>
+                                    <td>{{ backup.filename }}</td>
+                                    <td>{{ "%.2f"|format(backup.size) }} KB</td>
+                                    <td>{{ backup.modified.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('admin.download_backup', filename=backup.filename) }}" 
+                                               class="btn btn-sm btn-primary">
+                                                Download
+                                            </a>
+                                            <a href="{{ url_for('admin.restore_backup', filename=backup.filename) }}" 
+                                               class="btn btn-sm btn-warning"
+                                               onclick="return confirm('This will overwrite all current data. Are you sure?')">
+                                                Restore
+                                            </a>
+                                            <a href="{{ url_for('admin.delete_backup', filename=backup.filename) }}" 
+                                               class="btn btn-sm btn-danger"
+                                               onclick="return confirm('Delete this backup?')">
+                                                Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No backups found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Backup Modal -->
+<div class="modal fade" id="uploadBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.upload_backup') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Backup File</label>
+                        <input type="file" name="backup" class="form-control" accept=".json" required>
+                        <small class="text-muted">Only .json backup files are supported</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

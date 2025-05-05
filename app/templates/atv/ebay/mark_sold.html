@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Mark eBay Listing as Sold</h1>
+            <h4>Part: {{ part.name }}</h4>
+            <p>From: {{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sale Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Sold Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="sold_price" class="form-control" step="0.01" min="0" 
+                                       value="{{ part.list_price }}" required>
+                            </div>
+                            <div class="form-text">The final price the buyer paid for this item</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Shipping Cost</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="shipping_cost" class="form-control" step="0.01" min="0" 
+                                       value="0.00">
+                            </div>
+                            <div class="form-text">How much you spent on shipping this item</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Platform Fees</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="platform_fees" class="form-control" step="0.01" min="0" 
+                                       value="{{ (part.list_price * 0.13)|round(2) }}">
+                            </div>
+                            <div class="form-text">eBay fees (typically around 13% of the final sale price)</div>
+                        </div>
+                        
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Profit Calculation</h5>
+                                <table class="table">
+                                    <tr>
+                                        <td>Sale Price</td>
+                                        <td id="sale-price">${{ part.list_price }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cost Basis</td>
+                                        <td>${{ part.source_price or '0.00' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Shipping Cost</td>
+                                        <td id="shipping-cost">$0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Platform Fees</td>
+                                        <td id="platform-fees">${{ (part.list_price * 0.13)|round(2) }}</td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <th>Net Profit</th>
+                                        <th id="net-profit">${{ (part.list_price - (part.source_price or 0) - (part.list_price * 0.13))|round(2) }}</th>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-success">Mark as Sold</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Listing Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Title:</strong> {{ listing.title }}</p>
+                    <p><strong>Current Price:</strong> ${{ "%.2f"|format(listing.price) }}</p>
+                    <p><strong>Status:</strong> {{ listing.status|title }}</p>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Part Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ part.name }}</p>
+                    <p><strong>Part Number:</strong> {{ part.part_number or 'N/A' }}</p>
+                    <p><strong>Condition:</strong> {{ part.condition|replace('_', ' ')|title }}</p>
+                    <p><strong>Cost Basis:</strong> ${{ "%.2f"|format(part.source_price) if part.source_price else 'N/A' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Real-time profit calculation
+    document.addEventListener('DOMContentLoaded', function() {
+        const soldPriceInput = document.querySelector('input[name="sold_price"]');
+        const shippingCostInput = document.querySelector('input[name="shipping_cost"]');
+        const platformFeesInput = document.querySelector('input[name="platform_fees"]');
+        
+        const salePriceDisplay = document.getElementById('sale-price');
+        const shippingCostDisplay = document.getElementById('shipping-cost');
+        const platformFeesDisplay = document.getElementById('platform-fees');
+        const netProfitDisplay = document.getElementById('net-profit');
+        
+        const costBasis = {{ part.source_price or 0 }};
+        
+        function updateCalculation() {
+            const soldPrice = parseFloat(soldPriceInput.value) || 0;
+            const shippingCost = parseFloat(shippingCostInput.value) || 0;
+            const platformFees = parseFloat(platformFeesInput.value) || 0;
+            
+            const netProfit = soldPrice - costBasis - shippingCost - platformFees;
+            
+            salePriceDisplay.textContent = '$' + soldPrice.toFixed(2);
+            shippingCostDisplay.textContent = '$' + shippingCost.toFixed(2);
+            platformFeesDisplay.textContent = '$' + platformFees.toFixed(2);
+            netProfitDisplay.textContent = '$' + netProfit.toFixed(2);
+            
+            // Change color based on profit
+            if (netProfit > 0) {
+                netProfitDisplay.className = 'text-success';
+            } else {
+                netProfitDisplay.className = 'text-danger';
+            }
+        }
+        
+        soldPriceInput.addEventListener('input', updateCalculation);
+        shippingCostInput.addEventListener('input', updateCalculation);
+        platformFeesInput.addEventListener('input', updateCalculation);
+        
+        // Update fees when sold price changes
+        soldPriceInput.addEventListener('input', function() {
+            const soldPrice = parseFloat(soldPriceInput.value) || 0;
+            const estimatedFees = soldPrice * 0.13;
+            platformFeesInput.value = estimatedFees.toFixed(2);
+        });
+        
+        // Initial calculation
+        updateCalculation();
+    });
+</script>
+{% endblock %}
+{% endblock %}
