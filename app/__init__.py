@@ -72,5 +72,11 @@ def create_app(config_name=None):
     with app.app_context():
         # Create tables if they don't exist
         db.create_all()
+        
+        # Add a global template context processor for date/time
+        @app.context_processor
+        def inject_now():
+            from datetime import datetime
+            return {'now': datetime.utcnow()}
 
     return app
