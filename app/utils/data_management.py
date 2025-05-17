@@ -97,7 +97,7 @@ def export_data(export_path=None):
             'part_id': image.part_id,
             'created_at': serialize(image.created_at),
             'description': image.description,
-            'image_type': image.get('image_type', 'general')  # Add the image_type field
+            'image_type': getattr(image, 'image_type', 'general')  # Add the image_type field
         }
         data['images'].append(image_data)
     
