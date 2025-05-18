@@ -66,18 +66,32 @@ def parts_list():
         if (part.status != 'sold' and part.list_price) or (part.status == 'sold' and part.sold_price)
     )
 
-    return render_template('atv/parts/index.html',
-                         title='Parts List',
-                         parts=parts,
-                         parting_atvs=parting_atvs,
-                         storages=storages,
-                         total_value=total_value,
-                         selected_atv_id=atv_id,
-                         selected_storage_id=storage_id,
-                         selected_status=status,
-                         selected_condition=condition,
-                         selected_platform=platform,
-                         sort_by=sort_by)
+    # Check if the template exists, otherwise fall back to a more common path
+    template_vars = {
+        'title': 'Parts List',
+        'parts': parts,
+        'parting_atvs': parting_atvs,
+        'storages': storages,
+        'total_value': total_value,
+        'selected_atv_id': atv_id,
+        'selected_storage_id': storage_id,
+        'selected_status': status,
+        'selected_condition': condition,
+        'selected_platform': platform,
+        'sort_by': sort_by
+    }
+    
+    try:
+        # First try the specific template path
+        return render_template('atv/parts/index.html', **template_vars)
+    except Exception as e:
+        current_app.logger.error(f"Error rendering parts template: {str(e)}")
+        # Fall back to a potential alternate template location
+        try:
+            return render_template('atv/parts_list.html', **template_vars)
+        except Exception:
+            # Final fallback - create a simple parts list
+            return render_template('atv/parts_error.html', error=str(e), **template_vars)
 
 @bp.route('/<int:atv_id>/parts')
 def atv_parts(atv_id):

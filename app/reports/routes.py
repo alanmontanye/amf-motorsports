@@ -25,12 +25,20 @@ def financial():
     total_costs = total_parts_cost + total_shipping + total_fees + total_expenses
     total_profit = total_revenue - total_costs
 
-    # Monthly breakdown
+    # Monthly breakdown - more accurate calculation using calendar months
     now = datetime.utcnow()
     months = []
+    current_month_data = None  # Store current month data separately
+    
     for i in range(6):  # Last 6 months
+        # Get first day of the month
         start_date = (now - timedelta(days=30*i)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+        
+        # Get last day of the month more accurately
+        if start_date.month == 12:
+            end_date = datetime(start_date.year + 1, 1, 1) - timedelta(seconds=1)
+        else:
+            end_date = datetime(start_date.year, start_date.month + 1, 1) - timedelta(seconds=1)
         
         # Monthly revenue
         month_revenue = db.session.query(func.sum(Part.sold_price))\
@@ -54,14 +62,21 @@ def financial():
         month_total_costs = month_parts_cost + month_expenses
         month_profit = month_revenue - month_total_costs
         
-        months.append({
+        month_data = {
             'month': start_date.strftime('%B %Y'),
+            'month_obj': start_date,
             'revenue': month_revenue,
             'parts_cost': month_parts_cost,
             'expenses': month_expenses,
             'total_costs': month_total_costs,
             'profit': month_profit
-        })
+        }
+        
+        # Store current month separately for highlighting in the UI
+        if i == 0:
+            current_month_data = month_data
+        
+        months.append(month_data)
 
     # Get expense categories breakdown
     expense_categories = db.session.query(
@@ -69,6 +84,19 @@ def financial():
         func.sum(Expense.amount).label('total')
     ).group_by(Expense.category).all()
 
+    # Get current month's expense categories breakdown for more detailed view
+    current_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if current_month_start.month == 12:
+        current_month_end = datetime(current_month_start.year + 1, 1, 1) - timedelta(seconds=1)
+    else:
+        current_month_end = datetime(current_month_start.year, current_month_start.month + 1, 1) - timedelta(seconds=1)
+        
+    current_month_expenses = db.session.query(
+        Expense.category,
+        func.sum(Expense.amount).label('total')
+    ).filter(Expense.date.between(current_month_start, current_month_end))\
+     .group_by(Expense.category).all()
+    
     return render_template('reports/financial.html',
                          total_revenue=total_revenue,
                          total_parts_cost=total_parts_cost,
@@ -78,7 +106,11 @@ def financial():
                          total_costs=total_costs,
                          total_profit=total_profit,
                          months=months,
-                         expense_categories=expense_categories)
+                         current_month=current_month_data,
+                         today=datetime.utcnow(),
+                         current_month_name=datetime.utcnow().strftime('%B %Y'),
+                         expense_categories=expense_categories,
+                         current_month_expenses=current_month_expenses)
 
 @bp.route('/reports/inventory')
 def inventory():
