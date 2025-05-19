@@ -3,7 +3,7 @@ from app.atv import bp
 from app.models import ATV, Part, Expense, Sale, Image
 from app import db
 from app.atv.forms import ATVForm, PartForm, ExpenseForm, SaleForm, ImageUploadForm
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import os
 from werkzeug.utils import secure_filename
 import csv
@@ -340,8 +340,15 @@ def reports():
             'net': -atv.purchase_price
         })
 
-    # Sort transactions by date
-    transactions.sort(key=lambda x: x['date'], reverse=True)
+    # Sort transactions by date - convert all dates to datetime objects for consistent comparison
+    def get_sort_date(transaction):
+        date_val = transaction['date']
+        # If it's a date (not datetime), convert to datetime for consistent comparison
+        if isinstance(date_val, date) and not isinstance(date_val, datetime):
+            return datetime.combine(date_val, time.min)
+        return date_val
+        
+    transactions.sort(key=get_sort_date, reverse=True)
 
     return render_template('atv/reports.html', 
                          title='Reports & Logs',

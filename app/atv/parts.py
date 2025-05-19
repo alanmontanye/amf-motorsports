@@ -97,7 +97,23 @@ def parts_list():
 def atv_parts(atv_id):
     """Show parts for a specific ATV"""
     atv = ATV.query.get_or_404(atv_id)
-    return render_template('atv/parts/atv_parts.html', title=f'Parts - {atv.year} {atv.make} {atv.model}', atv=atv)
+    
+    template_vars = {
+        'title': f'Parts - {atv.year} {atv.make} {atv.model}',
+        'atv': atv
+    }
+    
+    try:
+        # First try the specific template path
+        return render_template('atv/parts/atv_parts.html', **template_vars)
+    except Exception as e:
+        current_app.logger.error(f"Error rendering ATV parts template: {str(e)}")
+        # Fall back to a potential alternate template location
+        try:
+            return render_template('atv/atv_parts.html', **template_vars)
+        except Exception:
+            # Final fallback to error template
+            return render_template('atv/parts_error.html', error=str(e), **template_vars)
 
 def handle_image_upload(files, part):
     """Helper function to handle image uploads"""
@@ -176,7 +192,23 @@ def add_part(atv_id):
         flash('Part added successfully!', 'success')
         return redirect(url_for('atv.view_part', id=part.id))
     
-    return render_template('atv/parts/form.html', title='Add Part', form=form, atv=atv)
+    template_vars = {
+        'title': 'Add Part',
+        'form': form,
+        'atv': atv
+    }
+    
+    try:
+        # First try the specific template path
+        return render_template('atv/parts/form.html', **template_vars)
+    except Exception as e:
+        current_app.logger.error(f"Error rendering part form template: {str(e)}")
+        # Fall back to a potential alternate template location
+        try:
+            return render_template('atv/form.html', **template_vars)
+        except Exception:
+            # Final fallback to error template
+            return render_template('atv/parts_error.html', error=str(e), **template_vars)
 
 @bp.route('/part/<int:id>/edit', methods=['GET', 'POST'])
 def edit_part(id):
@@ -276,7 +308,25 @@ def edit_part(id):
     else:
         form.storage_id.data = 0
     
-    return render_template('atv/parts/form.html', title='Edit Part', form=form, part=part)
+    # Add the images to the form in case of validation errors
+    template_vars = {
+        'title': 'Edit Part',
+        'form': form,
+        'part': part,
+        'id': id
+    }
+    
+    try:
+        # First try the specific template path
+        return render_template('atv/parts/form.html', **template_vars)
+    except Exception as e:
+        current_app.logger.error(f"Error rendering part edit template: {str(e)}")
+        # Fall back to a potential alternate template location
+        try:
+            return render_template('atv/form.html', **template_vars)
+        except Exception:
+            # Final fallback to error template
+            return render_template('atv/parts_error.html', error=str(e), **template_vars)
 
 @bp.route('/part/<int:id>/unsell', methods=['POST'])
 def unsell_part(id):
