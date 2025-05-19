@@ -81,17 +81,27 @@ def parts_list():
         'sort_by': sort_by
     }
     
-    try:
-        # First try the specific template path
-        return render_template('atv/parts/index.html', **template_vars)
-    except Exception as e:
-        current_app.logger.error(f"Error rendering parts template: {str(e)}")
-        # Fall back to a potential alternate template location
+    # Instead of cascading through multiple templates with try/except, let's use
+    # a simplified approach with a list of templates to try
+    templates_to_try = [
+        'atv/parts/index.html',  # Original path
+        'atv/part/index.html',   # Alternative path (no 's')
+        'atv/index_parts.html',  # Flattened path
+        'atv/parts_list.html',   # Alternative name
+        'atv/parts_error.html'   # Final fallback
+    ]
+    
+    # Try each template in order
+    last_error = None
+    for template in templates_to_try:
         try:
-            return render_template('atv/parts_list.html', **template_vars)
-        except Exception:
-            # Final fallback - create a simple parts list
-            return render_template('atv/parts_error.html', error=str(e), **template_vars)
+            return render_template(template, **template_vars)
+        except Exception as e:
+            current_app.logger.error(f"Failed to render template {template}: {str(e)}")
+            last_error = e
+    
+    # If we get here, none of the templates worked, so show the simplest possible error
+    return f"<h1>Parts List</h1><p>Error loading parts template: {str(last_error)}</p>"
 
 @bp.route('/<int:atv_id>/parts')
 def atv_parts(atv_id):
@@ -103,17 +113,26 @@ def atv_parts(atv_id):
         'atv': atv
     }
     
-    try:
-        # First try the specific template path
-        return render_template('atv/parts/atv_parts.html', **template_vars)
-    except Exception as e:
-        current_app.logger.error(f"Error rendering ATV parts template: {str(e)}")
-        # Fall back to a potential alternate template location
+    # Try several template paths in order
+    templates_to_try = [
+        'atv/parts/atv_parts.html',   # Original path
+        'atv/part/atv_parts.html',    # Alternative path (no 's')
+        'atv/atv_parts.html',         # Flattened path
+        'atv/parts.html',             # Simplified path
+        'atv/parts_error.html'        # Error fallback
+    ]
+    
+    # Try each template in order
+    last_error = None
+    for template in templates_to_try:
         try:
-            return render_template('atv/atv_parts.html', **template_vars)
-        except Exception:
-            # Final fallback to error template
-            return render_template('atv/parts_error.html', error=str(e), **template_vars)
+            return render_template(template, **template_vars)
+        except Exception as e:
+            current_app.logger.error(f"Failed to render template {template}: {str(e)}")
+            last_error = e
+    
+    # If we get here, none of the templates worked, so show a basic parts list
+    return f"<h1>Parts for {atv.year} {atv.make} {atv.model}</h1><p>Error loading parts template: {str(last_error)}</p>"
 
 def handle_image_upload(files, part):
     """Helper function to handle image uploads"""
@@ -198,17 +217,26 @@ def add_part(atv_id):
         'atv': atv
     }
     
-    try:
-        # First try the specific template path
-        return render_template('atv/parts/form.html', **template_vars)
-    except Exception as e:
-        current_app.logger.error(f"Error rendering part form template: {str(e)}")
-        # Fall back to a potential alternate template location
+    # Try several template paths in order
+    templates_to_try = [
+        'atv/parts/form.html',     # Original path
+        'atv/part/form.html',      # Alternative path (no 's')
+        'atv/form_parts.html',     # Flattened path
+        'atv/form.html',           # Simplified path
+        'atv/parts_error.html'     # Error fallback
+    ]
+    
+    # Try each template in order
+    last_error = None
+    for template in templates_to_try:
         try:
-            return render_template('atv/form.html', **template_vars)
-        except Exception:
-            # Final fallback to error template
-            return render_template('atv/parts_error.html', error=str(e), **template_vars)
+            return render_template(template, **template_vars)
+        except Exception as e:
+            current_app.logger.error(f"Failed to render template {template}: {str(e)}")
+            last_error = e
+    
+    # If we get here, none of the templates worked, so show the simplest possible error
+    return f"<h1>Add Part</h1><p>Error loading part form template: {str(last_error)}</p>"
 
 @bp.route('/part/<int:id>/edit', methods=['GET', 'POST'])
 def edit_part(id):
@@ -316,17 +344,26 @@ def edit_part(id):
         'id': id
     }
     
-    try:
-        # First try the specific template path
-        return render_template('atv/parts/form.html', **template_vars)
-    except Exception as e:
-        current_app.logger.error(f"Error rendering part edit template: {str(e)}")
-        # Fall back to a potential alternate template location
+    # Try several template paths in order
+    templates_to_try = [
+        'atv/parts/form.html',     # Original path
+        'atv/part/form.html',      # Alternative path (no 's')
+        'atv/form_parts.html',     # Flattened path
+        'atv/form.html',           # Simplified path
+        'atv/parts_error.html'     # Error fallback
+    ]
+    
+    # Try each template in order
+    last_error = None
+    for template in templates_to_try:
         try:
-            return render_template('atv/form.html', **template_vars)
-        except Exception:
-            # Final fallback to error template
-            return render_template('atv/parts_error.html', error=str(e), **template_vars)
+            return render_template(template, **template_vars)
+        except Exception as e:
+            current_app.logger.error(f"Failed to render template {template}: {str(e)}")
+            last_error = e
+    
+    # If we get here, none of the templates worked, so show the simplest possible error
+    return f"<h1>Edit Part</h1><p>Error loading part edit template: {str(last_error)}</p>"
 
 @bp.route('/part/<int:id>/unsell', methods=['POST'])
 def unsell_part(id):
