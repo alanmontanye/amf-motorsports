@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ title }}</h1>
+    {% if atv %}
+    <h4>{{ atv.year }} {{ atv.make }} {{ atv.model }}</h4>
+    {% endif %}
+    
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.csrf_token }}
+        
+        <div class="row">
+            <!-- Basic Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.part_number.label(class="form-label") }}
+                            {{ form.part_number(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.condition.label(class="form-label") }}
+                            {{ form.condition(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.storage_id.label(class="form-label") }}
+                            {{ form.storage_id(class="form-control") }}
+                            <small class="text-muted">Select a storage location from the list</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.location.label(class="form-label") }}
+                            {{ form.location(class="form-control") }}
+                            <small class="text-muted">Legacy storage location (for older parts)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.status.label(class="form-label") }}
+                            {{ form.status(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Image Upload Section -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Images</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Upload Images</label>
+                            <input type="file" name="images[]" class="form-control" accept="image/*" multiple>
+                            <small class="text-muted">You can select multiple images</small>
+                        </div>
+                        {% if part and part.images %}
+                        <div class="row mt-3">
+                            {% for image in part.images %}
+                            <div class="col-4 mb-3">
+                                <div class="position-relative">
+                                    <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" class="img-fluid rounded" alt="{{ part.name }}">
+                                    <div class="form-check position-absolute top-0 end-0 m-1">
+                                        <input type="checkbox" name="delete_images[]" value="{{ image.id }}" class="form-check-input bg-danger border-danger" id="delete_image_{{ image.id }}">
+                                        <label class="form-check-label" for="delete_image_{{ image.id }}"></label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if part.images.count() > 0 %}
+                        <small class="text-muted">Check the box on an image to delete it when saving</small>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financial Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Financial Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.source_price.label(class="form-label") }}
+                            {{ form.source_price(class="form-control") }}
+                            <small class="text-muted">Leave at $0 for parts from a complete ATV. Only set a value if the part was purchased individually.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.list_price.label(class="form-label") }}
+                            {{ form.list_price(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.platform.label(class="form-label") }}
+                            {{ form.platform(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.listing_url.label(class="form-label") }}
+                            {{ form.listing_url(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sales Information -->
+                <div class="card mb-4 sales-info" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Sales Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form.sold_price.label(class="form-label") }}
+                            {{ form.sold_price(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.sold_date.label(class="form-label") }}
+                            {{ form.sold_date(class="form-control", type="date") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.shipping_cost.label(class="form-label") }}
+                            {{ form.shipping_cost(class="form-control") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.platform_fees.label(class="form-label") }}
+                            {{ form.platform_fees(class="form-control") }}
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Estimated Profit:</strong>
+                            <span id="estimatedProfit">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Description -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Description</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form.description(class="form-control", rows=3) }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            {% if part %}
+            <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-secondary">Cancel</a>
+            {% else %}
+            <a href="{{ url_for('atv.atv_parts', atv_id=atv.id) }}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.querySelector('#status');
+    const salesInfo = document.querySelector('.sales-info');
+    
+    // Fields for profit calculation
+    const sourcePriceInput = document.querySelector('#source_price');
+    const soldPriceInput = document.querySelector('#sold_price');
+    const shippingCostInput = document.querySelector('#shipping_cost');
+    const platformFeesInput = document.querySelector('#platform_fees');
+    const estimatedProfitSpan = document.querySelector('#estimatedProfit');
+    
+    // Show/hide sales info based on initial status
+    if (statusSelect.value === 'sold') {
+        salesInfo.style.display = 'block';
+    }
+    
+    function calculateProfit() {
+        const sourcePrice = parseFloat(sourcePriceInput.value) || 0;
+        const soldPrice = parseFloat(soldPriceInput.value) || 0;
+        const shippingCost = parseFloat(shippingCostInput.value) || 0;
+        const platformFees = parseFloat(platformFeesInput.value) || 0;
+        
+        const profit = soldPrice - sourcePrice - shippingCost - platformFees;
+        estimatedProfitSpan.textContent = `$${profit.toFixed(2)}`;
+        estimatedProfitSpan.className = profit >= 0 ? 'text-success' : 'text-danger';
+    }
+    
+    function toggleSalesInfo() {
+        if (statusSelect.value === 'sold') {
+            salesInfo.style.display = 'block';
+            // Set sold date to today if empty
+            const soldDateInput = document.querySelector('#sold_date');
+            if (!soldDateInput.value) {
+                const today = new Date().toISOString().split('T')[0];
+                soldDateInput.value = today;
+            }
+        } else {
+            salesInfo.style.display = 'none';
+            // Clear sales info fields when not sold
+            document.querySelector('#sold_price').value = '';
+            document.querySelector('#sold_date').value = '';
+            document.querySelector('#shipping_cost').value = '';
+            document.querySelector('#platform_fees').value = '';
+        }
+        calculateProfit();
+    }
+    
+    // Event listeners
+    statusSelect.addEventListener('change', toggleSalesInfo);
+    
+    // Event listeners for profit calculation
+    [sourcePriceInput, soldPriceInput, shippingCostInput, platformFeesInput].forEach(input => {
+        input.addEventListener('input', calculateProfit);
+    });
+    
+    // Initial calculation
+    calculateProfit();
+    toggleSalesInfo();
+});
+</script>
+{% endblock %}
+{% endblock %}

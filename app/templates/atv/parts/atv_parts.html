@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Parts - {{ atv.year }} {{ atv.make }} {{ atv.model }}</h1>
+            <p class="text-muted">
+                Status: 
+                <span class="badge {% if atv.status == 'parting_out' %}bg-warning{% else %}bg-secondary{% endif %}">
+                    {{ atv.status|replace('_', ' ')|title }}
+                </span>
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('atv.add_part', atv_id=atv.id) }}" class="btn btn-primary">Add Part</a>
+            <a href="{{ url_for('atv.view_atv', id=atv.id) }}" class="btn btn-secondary">Back to ATV</a>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h5>Total Parts</h5>
+                    <p class="h3">{{ atv.parts.count() }}</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Parts Value</h5>
+                    <p class="h3">${{ "%.2f"|format(atv.total_parts_value()) }}</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Parts Sold</h5>
+                    <p class="h3">{{ atv.parts.filter_by(status='sold').count() }}</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Net Profit</h5>
+                    <p class="h3 {% if atv.parts_profit() > 0 %}text-success{% else %}text-danger{% endif %}">
+                        ${{ "%.2f"|format(atv.parts_profit()) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Parts List -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Part Name</th>
+                    <th>Status</th>
+                    <th>Location</th>
+                    <th>List Price</th>
+                    <th>Platform</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for part in atv.parts %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('atv.view_part', id=part.id) }}">{{ part.name }}</a>
+                        {% if part.part_number %}
+                        <br><small class="text-muted">{{ part.part_number }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if part.status == 'in_stock' %}bg-primary{% elif part.status == 'listed' %}bg-warning{% else %}bg-success{% endif %}">
+                            {{ part.status|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>{{ part.location or 'N/A' }}</td>
+                    <td>
+                        {% if part.status == 'sold' %}
+                        <span class="text-success">${{ "%.2f"|format(part.sold_price) }}</span>
+                        {% else %}
+                        ${{ "%.2f"|format(part.list_price) if part.list_price else 'N/A' }}
+                        {% endif %}
+                    </td>
+                    <td>{{ part.platform|title if part.platform else 'N/A' }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-sm btn-info">View</a>
+                            <a href="{{ url_for('atv.edit_part', id=part.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                            <form action="{{ url_for('atv.delete_part', id=part.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this part?')">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not atv.parts.count() %}
+    <div class="alert alert-info">
+        No parts added yet. Click the "Add Part" button to start tracking parts for this ATV.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

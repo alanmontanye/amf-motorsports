@@ -234,6 +234,13 @@ def reports():
     
     # Create lists for month and year dropdowns
     current_year = today.year
+    current_month = today.month
+    
+    # Generate month name for display
+    month_names = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December']
+    current_month_name = f"{month_names[current_month-1]} {current_year}"
+    
     years = list(range(current_year - 5, current_year + 1))
     months = [(1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'), (5, 'May'), 
              (6, 'June'), (7, 'July'), (8, 'August'), (9, 'September'), (10, 'October'), 

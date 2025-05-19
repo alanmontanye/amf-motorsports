@@ -236,7 +236,43 @@ def add_part(atv_id):
             last_error = e
     
     # If we get here, none of the templates worked, so show the simplest possible error
-    return f"<h1>Add Part</h1><p>Error loading part form template: {str(last_error)}</p>"
+    # Create a very basic form to add a part without using templates
+    html = f"""
+    <h1>Add Part - Simple Form</h1>
+    <p><em>Using emergency fallback form - templates could not be loaded: {str(last_error)}</em></p>
+    <form method="POST" enctype="multipart/form-data">
+        {form.csrf_token}
+        <div style="margin-bottom: 15px;">
+            <label>Name:</label><br>
+            {form.name(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Part Number:</label><br>
+            {form.part_number(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Condition:</label><br>
+            {form.condition(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Status:</label><br>
+            {form.status(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Description:</label><br>
+            {form.description(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Source Price:</label><br>
+            {form.source_price(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <button type="submit" class="btn btn-primary">Add Part</button>
+            <a href="{url_for('atv.view_atv', id=atv.id)}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    """
+    return html
 
 @bp.route('/part/<int:id>/edit', methods=['GET', 'POST'])
 def edit_part(id):
@@ -362,8 +398,43 @@ def edit_part(id):
             current_app.logger.error(f"Failed to render template {template}: {str(e)}")
             last_error = e
     
-    # If we get here, none of the templates worked, so show the simplest possible error
-    return f"<h1>Edit Part</h1><p>Error loading part edit template: {str(last_error)}</p>"
+    # If we get here, none of the templates worked, so show a basic fallback form
+    html = f"""
+    <h1>Edit Part - Simple Form</h1>
+    <p><em>Using emergency fallback form - templates could not be loaded: {str(last_error)}</em></p>
+    <form method="POST" enctype="multipart/form-data">
+        {form.csrf_token}
+        <div style="margin-bottom: 15px;">
+            <label>Name:</label><br>
+            {form.name(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Part Number:</label><br>
+            {form.part_number(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Condition:</label><br>
+            {form.condition(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Status:</label><br>
+            {form.status(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Description:</label><br>
+            {form.description(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>Source Price:</label><br>
+            {form.source_price(class_="form-control")}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{url_for('atv.view_part', id=part.id)}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    """
+    return html
 
 @bp.route('/part/<int:id>/unsell', methods=['POST'])
 def unsell_part(id):
