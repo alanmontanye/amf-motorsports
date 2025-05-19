@@ -17,22 +17,103 @@
         </div>
     </div>
 
-    <!-- Date Range Filter -->
+    <!-- Enhanced Date Range Filter -->
     <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="start_date" value="{{ request.args.get('start_date', '') }}">
+            <ul class="nav nav-tabs" id="filterTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if filter_type == 'current_month' %}active{% endif %}" id="current-month-tab" data-bs-toggle="tab" data-bs-target="#current-month" type="button" role="tab">Current Month</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if filter_type == 'month' %}active{% endif %}" id="month-tab" data-bs-toggle="tab" data-bs-target="#month" type="button" role="tab">Month</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if filter_type == 'year' %}active{% endif %}" id="year-tab" data-bs-toggle="tab" data-bs-target="#year" type="button" role="tab">Year</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if filter_type == 'custom' %}active{% endif %}" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab">Custom</button>
+                </li>
+            </ul>
+            
+            <div class="tab-content mt-3" id="filterTabContent">
+                <!-- Current Month Filter -->
+                <div class="tab-pane fade {% if filter_type == 'current_month' %}show active{% endif %}" id="current-month" role="tabpanel">
+                    <form method="GET" class="row g-3">
+                        <input type="hidden" name="filter_type" value="current_month">
+                        <div class="col-md-12 d-flex align-items-end">
+                            <p class="mb-0 me-3">Showing data for: <strong>{{ current_month_name }}</strong></p>
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">End Date</label>
-                    <input type="date" class="form-control" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                
+                <!-- Month Filter -->
+                <div class="tab-pane fade {% if filter_type == 'month' %}show active{% endif %}" id="month" role="tabpanel">
+                    <form method="GET" class="row g-3">
+                        <input type="hidden" name="filter_type" value="month">
+                        <div class="col-md-4">
+                            <label class="form-label">Month</label>
+                            <select name="month" class="form-select">
+                                {% for month_num, month_name in months %}
+                                <option value="{{ month_num }}" {% if selected_month == month_num %}selected{% endif %}>{{ month_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Year</label>
+                            <select name="year" class="form-select">
+                                {% for year in years %}
+                                <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Apply Filter</button>
+                
+                <!-- Year Filter -->
+                <div class="tab-pane fade {% if filter_type == 'year' %}show active{% endif %}" id="year" role="tabpanel">
+                    <form method="GET" class="row g-3">
+                        <input type="hidden" name="filter_type" value="year">
+                        <div class="col-md-4">
+                            <label class="form-label">Year</label>
+                            <select name="year" class="form-select">
+                                {% for year in years %}
+                                <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+                
+                <!-- Custom Date Range -->
+                <div class="tab-pane fade {% if filter_type == 'custom' %}show active{% endif %}" id="custom" role="tabpanel">
+                    <form method="GET" class="row g-3">
+                        <input type="hidden" name="filter_type" value="custom">
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" value="{{ start_date|string }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" name="end_date" value="{{ end_date|string }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Date Range Display -->
+            <div class="mt-3">
+                <p class="mb-0"><strong>Filter Range:</strong> {{ start_date.strftime('%b %d, %Y') }} to {{ end_date.strftime('%b %d, %Y') }}</p>
+            </div>
         </div>
     </div>
 
@@ -40,28 +121,35 @@
         <!-- Financial Summary -->
         <div class="col-md-12">
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Financial Summary</h5>
+                    <span class="badge bg-info">{{ start_date.strftime('%b %d, %Y') }} - {{ end_date.strftime('%b %d, %Y') }}</span>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
                             <h6>Total Revenue</h6>
                             <p class="h3">${{ "%.2f"|format(summary.total_revenue) }}</p>
+                            <small class="text-muted">ATVs: ${{ "%.2f"|format(atv_sales.revenue or 0) }}</small><br>
+                            <small class="text-muted">Parts: ${{ "%.2f"|format(part_sales.revenue or 0) }}</small>
                         </div>
                         <div class="col-md-3">
                             <h6>Total Expenses</h6>
                             <p class="h3">${{ "%.2f"|format(summary.total_expenses) }}</p>
+                            <small class="text-muted">ATV Purchases: ${{ "%.2f"|format(atv_purchases.total or 0) }}</small><br>
+                            <small class="text-muted">Other Expenses: ${{ "%.2f"|format(summary.total_expenses - (atv_purchases.total or 0)) }}</small>
                         </div>
                         <div class="col-md-3">
                             <h6>Net Profit</h6>
-                            <p class="h3 {% if summary.net_profit > 0 %}text-success{% else %}text-danger{% endif %}">
+                            <p class="h3 {% if summary.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">
                                 ${{ "%.2f"|format(summary.net_profit) }}
                             </p>
                         </div>
                         <div class="col-md-3">
                             <h6>Profit Margin</h6>
-                            <p class="h3">{{ "%.1f"|format(summary.profit_margin) }}%</p>
+                            <p class="h3 {% if summary.profit_margin < 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ "%.1f"|format(summary.profit_margin) }}%
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -76,7 +164,7 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Category</th>
@@ -88,15 +176,27 @@
                             <tbody>
                                 <tr>
                                     <td>Complete ATVs</td>
-                                    <td>{{ summary.atv_sales.count }}</td>
-                                    <td>${{ "%.2f"|format(summary.atv_sales.revenue) }}</td>
-                                    <td>${{ "%.2f"|format(summary.atv_sales.profit) }}</td>
+                                    <td>{{ atv_sales.count }}</td>
+                                    <td>${{ "%.2f"|format(atv_sales.revenue or 0) }}</td>
+                                    <td class="{% if (atv_sales.profit or 0) - (atv_purchases.total or 0) < 0 %}text-danger{% else %}text-success{% endif %}">
+                                        ${{ "%.2f"|format((atv_sales.profit or 0) - (atv_purchases.total or 0)) }}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td>Parts</td>
-                                    <td>{{ summary.part_sales.count }}</td>
-                                    <td>${{ "%.2f"|format(summary.part_sales.revenue) }}</td>
-                                    <td>${{ "%.2f"|format(summary.part_sales.profit) }}</td>
+                                    <td>{{ part_sales.count }}</td>
+                                    <td>${{ "%.2f"|format(part_sales.revenue or 0) }}</td>
+                                    <td class="{% if part_sales.profit < 0 %}text-danger{% else %}text-success{% endif %}">
+                                        ${{ "%.2f"|format(part_sales.profit or 0) }}
+                                    </td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td><strong>Total</strong></td>
+                                    <td><strong>{{ (atv_sales.count or 0) + (part_sales.count or 0) }}</strong></td>
+                                    <td><strong>${{ "%.2f"|format(summary.total_revenue) }}</strong></td>
+                                    <td class="{% if summary.net_profit < 0 %}text-danger{% else %}text-success{% endif %}">
+                                        <strong>${{ "%.2f"|format(summary.net_profit) }}</strong>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -113,22 +213,38 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>Category</th>
                                     <th>Count</th>
                                     <th>Total</th>
+                                    <th>%</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for category in summary.expenses_by_category %}
+                                <tr class="table-info">
+                                    <td>ATV Purchases</td>
+                                    <td>{{ atv_purchases.count }}</td>
+                                    <td>${{ "%.2f"|format(atv_purchases.total or 0) }}</td>
+                                    <td>{{ "%.1f"|format(((atv_purchases.total or 0) / summary.total_expenses * 100) if summary.total_expenses > 0 else 0) }}%</td>
+                                </tr>
+                                
+                                {% for expense in summary.expenses_by_category if expense.name|lower != 'atv purchases' %}
                                 <tr>
-                                    <td>{{ category.name|title }}</td>
-                                    <td>{{ category.count }}</td>
-                                    <td>${{ "%.2f"|format(category.total) }}</td>
+                                    <td>{{ expense.name|title }}</td>
+                                    <td>{{ expense.count }}</td>
+                                    <td>${{ "%.2f"|format(expense.total) }}</td>
+                                    <td>{{ "%.1f"|format((expense.total / summary.total_expenses * 100) if summary.total_expenses > 0 else 0) }}%</td>
                                 </tr>
                                 {% endfor %}
+                                
+                                <tr class="table-primary">
+                                    <td><strong>Total</strong></td>
+                                    <td></td>
+                                    <td><strong>${{ "%.2f"|format(summary.total_expenses) }}</strong></td>
+                                    <td><strong>100%</strong></td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>

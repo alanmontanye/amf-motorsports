@@ -191,22 +191,53 @@ def delete_sale(id):
 # Reports route
 @bp.route('/reports')
 def reports():
-    """Show financial reports and logs"""
-    # Get date range from request args or default to current month
-    today = datetime.utcnow()
-    start_date = request.args.get('start_date', None)
-    end_date = request.args.get('end_date', None)
-
-    if not start_date:
-        start_date = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    """Shows financial reports and transaction logs"""
+    # Get filter options from query parameters
+    filter_type = request.args.get('filter_type', 'custom')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    filter_month = request.args.get('month')
+    filter_year = request.args.get('year')
+    
+    today = datetime.now().date()
+    
+    # Handle different filter types
+    if filter_type == 'month' and filter_month and filter_year:
+        # Month filter - show entire month
+        year = int(filter_year)
+        month = int(filter_month)
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+    elif filter_type == 'year' and filter_year:
+        # Year filter - show entire year
+        year = int(filter_year)
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
+    elif filter_type == 'current_month':
+        # Current month filter
+        start_date = date(today.year, today.month, 1)
+        if today.month == 12:
+            end_date = date(today.year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(today.year, today.month + 1, 1) - timedelta(days=1)
+    elif filter_type == 'custom' and start_date_str and end_date_str:
+        # Custom date range
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
     else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d')
-
-    if not end_date:
+        # Default to last 30 days
         end_date = today
-    else:
-        end_date = datetime.strptime(end_date, '%Y-%m-%d')
-        end_date = end_date.replace(hour=23, minute=59, second=59)
+        start_date = end_date - timedelta(days=30)
+    
+    # Create lists for month and year dropdowns
+    current_year = today.year
+    years = list(range(current_year - 5, current_year + 1))
+    months = [(1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'), (5, 'May'), 
+             (6, 'June'), (7, 'July'), (8, 'August'), (9, 'September'), (10, 'October'), 
+             (11, 'November'), (12, 'December')]
 
     # Calculate summary statistics
     atv_sales = db.session.query(
@@ -261,16 +292,20 @@ def reports():
 
     # Calculate totals
     total_revenue = (atv_sales.revenue or 0) + (part_sales.revenue or 0)
-    total_profit = (atv_sales.profit or 0) + (part_sales.profit or 0)
+    
+    # ATV purchase costs should be factored into profit calculations
+    atv_purchase_costs = atv_purchases.total or 0
     regular_expenses = sum(e.total or 0 for e in expenses)
     
-    # For financial summary, we shouldn't count ATV purchases as direct expenses 
-    # against revenue when we're already counting the part profits
-    # since the ATV cost is reflected in the part costs
-    total_expenses = regular_expenses
+    # Total expenses should include regular expenses AND ATV purchase costs
+    total_expenses = regular_expenses + atv_purchase_costs
     
-    # Net profit is the profit from sales minus only the non-purchase expenses
-    net_profit = total_profit - regular_expenses
+    # Recalculate ATV sales profit to account for ATV purchase costs
+    true_atv_profit = (atv_sales.profit or 0) - atv_purchase_costs
+    
+    # Net profit is the profit from sales minus all expenses (including ATV purchases)
+    total_profit = (part_sales.profit or 0) + true_atv_profit
+    net_profit = total_revenue - total_expenses
     
     try:
         profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
@@ -353,7 +388,19 @@ def reports():
     return render_template('atv/reports.html', 
                          title='Reports & Logs',
                          summary=summary,
-                         transactions=transactions)
+                         transactions=transactions,
+                         start_date=start_date,
+                         end_date=end_date,
+                         filter_type=filter_type,
+                         current_month=today.month,
+                         current_year=today.year,
+                         years=years,
+                         months=months,
+                         selected_month=int(filter_month) if filter_month else None,
+                         selected_year=int(filter_year) if filter_year else None,
+                         atv_purchases=atv_purchases,
+                         part_sales=part_sales,
+                         atv_sales=atv_sales)
 
 @bp.route('/export/<data_type>')
 def export_data(data_type):
