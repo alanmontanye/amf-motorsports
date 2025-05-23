@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">eBay API Settings</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>eBay API Credentials</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('atv.ebay_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="form-group">
+                            <label for="environment">Environment</label>
+                            <select class="form-control" id="environment" name="environment">
+                                <option value="sandbox" {% if credentials and credentials.environment == 'sandbox' %}selected{% endif %}>Sandbox (Testing)</option>
+                                <option value="production" {% if credentials and credentials.environment == 'production' %}selected{% endif %}>Production</option>
+                            </select>
+                            <small class="form-text text-muted">Start with Sandbox for testing, then switch to Production for live listings.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="client_id">Client ID</label>
+                            <input type="text" class="form-control" id="client_id" name="client_id" 
+                                   value="{{ credentials.client_id if credentials else '' }}" required>
+                            <small class="form-text text-muted">Your eBay API Client ID from the developer portal.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="client_secret">Client Secret</label>
+                            <input type="password" class="form-control" id="client_secret" name="client_secret" 
+                                   value="{{ credentials.client_secret if credentials else '' }}" required>
+                            <small class="form-text text-muted">Your eBay API Client Secret from the developer portal.</small>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">Default Policies</h5>
+                        
+                        <div class="form-group">
+                            <label for="return_policy">Default Return Policy</label>
+                            <select class="form-control" id="return_policy" name="return_policy">
+                                <option value="no_returns" {% if credentials and credentials.default_return_policy == 'no_returns' %}selected{% endif %}>No Returns</option>
+                                <option value="30_days" {% if not credentials or credentials.default_return_policy == '30_days' %}selected{% endif %}>30 Day Returns</option>
+                                <option value="60_days" {% if credentials and credentials.default_return_policy == '60_days' %}selected{% endif %}>60 Day Returns</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="shipping_policy">Default Shipping Policy</label>
+                            <select class="form-control" id="shipping_policy" name="shipping_policy">
+                                <option value="calculated" {% if not credentials or credentials.default_shipping_policy == 'calculated' %}selected{% endif %}>Calculated Shipping</option>
+                                <option value="flat_rate" {% if credentials and credentials.default_shipping_policy == 'flat_rate' %}selected{% endif %}>Flat Rate</option>
+                                <option value="free" {% if credentials and credentials.default_shipping_policy == 'free' %}selected{% endif %}>Free Shipping</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="payment_policy">Default Payment Policy</label>
+                            <select class="form-control" id="payment_policy" name="payment_policy">
+                                <option value="immediate" {% if not credentials or credentials.default_payment_policy == 'immediate' %}selected{% endif %}>Immediate Payment Required</option>
+                                <option value="no_immediate" {% if credentials and credentials.default_payment_policy == 'no_immediate' %}selected{% endif %}>No Immediate Payment Required</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary mt-3">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>eBay Integration Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>Status:</strong> 
+                        {% if credentials and credentials.is_active %}
+                        <span class="badge badge-success">Connected</span>
+                        {% else %}
+                        <span class="badge badge-warning">Not Connected</span>
+                        {% endif %}
+                    </p>
+                    
+                    {% if credentials %}
+                    <p><strong>Environment:</strong> {{ credentials.environment|capitalize }}</p>
+                    <p><strong>Last Sync:</strong> {{ credentials.last_sync.strftime('%Y-%m-%d %H:%M') if credentials.last_sync else 'Never' }}</p>
+                    
+                    <hr>
+                    
+                    {% if credentials.is_token_valid() %}
+                    <p><span class="badge badge-success">Token Valid</span></p>
+                    <p><strong>Token Expires:</strong> {{ credentials.token_expiry.strftime('%Y-%m-%d %H:%M') if credentials.token_expiry else 'N/A' }}</p>
+                    {% else %}
+                    <p><span class="badge badge-danger">Token Invalid or Expired</span></p>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <a href="#" class="btn btn-primary btn-block" id="authorize-btn">
+                            {% if credentials.is_token_valid() %}
+                            Reauthorize eBay Account
+                            {% else %}
+                            Authorize eBay Account
+                            {% endif %}
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Enter your eBay API credentials to get started.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <a href="{{ url_for('atv.ebay_dashboard') }}">eBay Dashboard</a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('atv.ebay_templates') }}">Manage Templates</a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="{{ url_for('atv.ebay_analytics') }}">View Analytics</a>
+                        </li>
+                        <li class="list-group-item">
+                            <a href="https://developer.ebay.com" target="_blank">eBay Developer Portal</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        $('#authorize-btn').click(function(e) {
+            e.preventDefault();
+            alert('eBay authorization will be implemented when the API integration is ready.');
+            // This will be replaced with actual OAuth flow when API integration is ready
+        });
+    });
+</script>
+{% endblock %}

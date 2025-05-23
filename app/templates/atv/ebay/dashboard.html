@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">eBay Dashboard</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Active Listings</h5>
+                    <h2 class="card-text">{{ active_count }}</h2>
+                    <p class="card-text">Estimated Value: ${{ active_value|round(2) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Listings</h5>
+                    <h2 class="card-text">{{ pending_count }}</h2>
+                    <p class="card-text">Ready to be listed on eBay</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Sold This Month</h5>
+                    <h2 class="card-text">{{ sold_count }}</h2>
+                    <p class="card-text">Revenue: ${{ sold_revenue|round(2) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <ul class="nav nav-tabs" id="ebayTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="active-tab" data-toggle="tab" href="#active" role="tab">Active Listings</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="pending-tab" data-toggle="tab" href="#pending" role="tab">Pending Listings</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="sold-tab" data-toggle="tab" href="#sold" role="tab">Recently Sold</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="orders-tab" data-toggle="tab" href="#orders" role="tab">Orders</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="bulk-tab" data-toggle="tab" href="#bulk" role="tab">Bulk Actions</a>
+        </li>
+    </ul>
+    
+    <div class="tab-content mt-3" id="ebayTabsContent">
+        <!-- Active Listings Tab -->
+        <div class="tab-pane fade show active" id="active" role="tabpanel">
+            {% if active_listings %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Listed Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in active_listings %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('atv.view_part', id=listing.part_id) }}">{{ listing.title }}</a>
+                                {% if listing.ebay_item_id %}
+                                <a href="https://www.ebay.com/itm/{{ listing.ebay_item_id }}" target="_blank" class="ml-2">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td>${{ listing.price }}</td>
+                            <td>
+                                <span class="badge badge-{% if listing.status == 'active' %}success{% else %}warning{% endif %}">
+                                    {{ listing.status|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ listing.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('atv.edit_ebay_listing', listing_id=listing.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-toggle="modal" data-target="#endListingModal"
+                                        data-listing-id="{{ listing.id }}">End</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" 
+                                        data-toggle="modal" data-target="#soldListingModal"
+                                        data-listing-id="{{ listing.id }}"
+                                        data-listing-price="{{ listing.price }}">Sold</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No active eBay listings.</div>
+            {% endif %}
+        </div>
+        
+        <!-- Pending Listings Tab -->
+        <div class="tab-pane fade" id="pending" role="tabpanel">
+            {% if pending_listings %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Price</th>
+                            <th>Created Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in pending_listings %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('atv.view_part', id=listing.part_id) }}">{{ listing.title }}</a>
+                            </td>
+                            <td>${{ listing.price }}</td>
+                            <td>{{ listing.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('atv.edit_ebay_listing', listing_id=listing.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <button type="button" class="btn btn-sm btn-outline-success">List Now</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No pending eBay listings.</div>
+            {% endif %}
+        </div>
+        
+        <!-- Sold Listings Tab -->
+        <div class="tab-pane fade" id="sold" role="tabpanel">
+            {% if sold_listings %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Sold Price</th>
+                            <th>Sold Date</th>
+                            <th>Profit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in sold_listings %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('atv.view_part', id=listing.part_id) }}">{{ listing.title }}</a>
+                            </td>
+                            <td>${{ listing.part.sold_price }}</td>
+                            <td>{{ listing.part.sold_date.strftime('%Y-%m-%d') if listing.part.sold_date else 'N/A' }}</td>
+                            <td>${{ listing.part.net_profit()|round(2) }}</td>
+                            <td>
+                                <a href="{{ url_for('atv.view_part', id=listing.part_id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No sold eBay listings.</div>
+            {% endif %}
+        </div>
+        
+        <!-- Orders Tab -->
+        <div class="tab-pane fade" id="orders" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-shopping-cart mr-2"></i> eBay Orders</h5>
+                    <a href="{{ url_for('atv.sync_ebay_orders') }}" class="btn btn-success">
+                        <i class="fas fa-sync"></i> Sync Orders
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Buyer</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Order Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.ebay_order_id }}</td>
+                                    <td>{{ order.buyer_username }}</td>
+                                    <td>{{ order.item_count }}</td>
+                                    <td>${{ order.total_price }}</td>
+                                    <td>
+                                        {% if order.status == 'PAID' %}
+                                        <span class="badge bg-success">Paid</span>
+                                        {% elif order.status == 'AWAITING_SHIPMENT' %}
+                                        <span class="badge bg-warning">Awaiting Shipment</span>
+                                        {% elif order.status == 'SHIPPED' %}
+                                        <span class="badge bg-info">Shipped</span>
+                                        {% elif order.status == 'DELIVERED' %}
+                                        <span class="badge bg-primary">Delivered</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ order.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('atv.view_order', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if order.status == 'AWAITING_SHIPMENT' %}
+                                        <a href="{{ url_for('atv.view_order', order_id=order.id) }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-truck"></i> Ship
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Order Summary Cards -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h5>Total Orders</h5>
+                                    <h3>{{ recent_orders|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h5>Total Revenue</h5>
+                                    <h3>${{ total_revenue }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h5>Awaiting Shipment</h5>
+                                    <h3>{{ awaiting_shipment }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h5>Shipped Orders</h5>
+                                    <h3>{{ shipped_orders }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <div class="alert alert-info">
+                        <p>No eBay orders found. Orders will appear here after synchronization.</p>
+                        <p>You can manually sync orders using the button above.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bulk Actions Tab -->
+        <div class="tab-pane fade" id="bulk" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Bulk List Parts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <p>Select parts to list on eBay. You can filter by ATV to find specific parts.</p>
+                    </div>
+                    
+                    <form method="GET" class="mb-3">
+                        <div class="form-row">
+                            <div class="col-md-4">
+                                <label for="atv_filter">Filter by ATV:</label>
+                                <select class="form-control" id="atv_filter" name="atv_id">
+                                    <option value="">All ATVs</option>
+                                    {% for atv in atvs %}
+                                    <option value="{{ atv.id }}" {% if request.args.get('atv_id')|int == atv.id %}selected{% endif %}>
+                                        {{ atv.year }} {{ atv.make }} {{ atv.model }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 align-self-end">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <form method="POST" action="{{ url_for('atv.bulk_list_on_ebay') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="use_price_analysis" name="use_price_analysis" checked>
+                            <label class="form-check-label" for="use_price_analysis">
+                                <i class="fas fa-magic"></i> Automatically set prices based on eBay market analysis
+                            </label>
+                            <small class="form-text text-muted">This will analyze similar sold items on eBay to suggest optimal pricing for each part</small>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="select-all"></th>
+                                        <th>ATV</th>
+                                        <th>Part Name</th>
+                                        <th>Condition</th>
+                                        <th>List Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for part in eligible_parts %}
+                                    <tr>
+                                        <td><input type="checkbox" name="part_ids" value="{{ part.id }}" class="part-checkbox"></td>
+                                        <td>{{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</td>
+                                        <td><a href="{{ url_for('atv.view_part', id=part.id) }}">{{ part.name }}</a></td>
+                                        <td>{{ part.condition|replace('_', ' ')|capitalize }}</td>
+                                        <td>${{ part.list_price }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if eligible_parts %}
+                        <div class="form-group mt-3">
+                            <button type="submit" class="btn btn-success" id="bulk-list-btn" disabled>
+                                List Selected Parts on eBay
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            No eligible parts found for eBay listing.
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- End Listing Modal -->
+<div class="modal fade" id="endListingModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">End eBay Listing</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to end this eBay listing? The part will be marked as in stock again.</p>
+            </div>
+            <div class="modal-footer">
+                <form id="end-listing-form" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">End Listing</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mark as Sold Modal -->
+<div class="modal fade" id="soldListingModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark as Sold</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="sold-listing-form" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="form-group">
+                        <label for="sold_price">Sold Price ($)</label>
+                        <input type="number" class="form-control" id="sold_price" name="sold_price" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shipping_cost">Shipping Cost ($)</label>
+                        <input type="number" class="form-control" id="shipping_cost" name="shipping_cost" step="0.01" min="0" value="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="platform_fees">Platform Fees ($)</label>
+                        <input type="number" class="form-control" id="platform_fees" name="platform_fees" step="0.01" min="0" value="0.00">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Mark as Sold</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        // Handle End Listing Modal
+        $('#endListingModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            var listingId = button.data('listing-id');
+            var form = $('#end-listing-form');
+            form.attr('action', '/atv/ebay/listing/' + listingId + '/end');
+        });
+        
+        // Handle Sold Listing Modal
+        $('#soldListingModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            var listingId = button.data('listing-id');
+            var listingPrice = button.data('listing-price');
+            var form = $('#sold-listing-form');
+            form.attr('action', '/atv/ebay/listing/' + listingId + '/sold');
+            $('#sold_price').val(listingPrice);
+        });
+        
+        // Handle Select All checkbox
+        $('#select-all').change(function() {
+            $('.part-checkbox').prop('checked', this.checked);
+            updateBulkButton();
+        });
+        
+        // Handle individual checkboxes
+        $('.part-checkbox').change(function() {
+            updateBulkButton();
+        });
+        
+        // Enable/disable bulk list button based on selection
+        function updateBulkButton() {
+            $('#bulk-list-btn').prop('disabled', $('.part-checkbox:checked').length === 0);
+        }
+    });
+</script>
+{% endblock %}

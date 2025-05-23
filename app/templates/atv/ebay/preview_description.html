@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-robot mr-2"></i>AI-Generated eBay Description</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <h5>Description Preview for: {{ part.name }}</h5>
+                    <p class="mb-0">This description was automatically generated based on part details and ATV information.</p>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="ebay-description-preview p-3 border rounded">
+                            {{ description|safe }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Part Details Used</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Part Name:</strong> {{ part.name }}</p>
+                                <p><strong>Condition:</strong> {{ part.condition|replace('_', ' ')|capitalize }}</p>
+                                <p><strong>ATV:</strong> {{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</p>
+                                <p><strong>Original Description:</strong> {{ part.description or 'None' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('atv.apply_ai_description', part_id=part.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="description" value="{{ description|e }}">
+                                    <p>You can use this description when creating your eBay listing:</p>
+                                    <div class="btn-group">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-check mr-1"></i> Apply This Description
+                                        </button>
+                                        <a href="{{ url_for('atv.create_ebay_listing', part_id=part.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-tag mr-1"></i> Create Listing Now
+                                        </a>
+                                        <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left mr-1"></i> Back to Part
+                                        </a>
+                                    </div>
+                                </form>
+                                
+                                <div class="mt-4">
+                                    <h6>Not satisfied with the generated description?</h6>
+                                    <a href="{{ url_for('atv.regenerate_description', part_id=part.id) }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-sync mr-1"></i> Generate New Description
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ebay-description-preview {
+        background-color: #fff;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+    }
+    .ebay-description-preview h1, 
+    .ebay-description-preview h2, 
+    .ebay-description-preview h3 {
+        color: #0053a0;
+    }
+    .ebay-description-preview ul {
+        padding-left: 20px;
+    }
+    .ebay-description-preview table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .ebay-description-preview table, 
+    .ebay-description-preview th, 
+    .ebay-description-preview td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+    .ebay-description-preview th {
+        background-color: #f2f2f2;
+    }
+</style>
+{% endblock %}

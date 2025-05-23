@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">eBay Sales Analytics</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Monthly Sales Performance ({{ month_names[datetime.now().month-1] }} {{ datetime.now().year }})</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlySalesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Top Selling Parts</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_parts %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Part Name</th>
+                                    <th>Quantity Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for part in top_parts %}
+                                <tr>
+                                    <td>{{ part[0] }}</td>
+                                    <td>{{ part[1] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">No sales data available.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Profit Margin Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="profitMarginChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Annual Performance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card text-white bg-primary">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Total Sales</h6>
+                                    <h3 class="card-text">{{ sold_listings|length }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Total Revenue</h6>
+                                    <h3 class="card-text">${{ monthly_revenue|sum|round(2) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-white bg-info">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Total Profit</h6>
+                                    <h3 class="card-text">${{ monthly_profit|sum|round(2) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="card text-white bg-warning">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">Avg. Profit Margin</h6>
+                                    {% set total_revenue = monthly_revenue|sum %}
+                                    {% set total_profit = monthly_profit|sum %}
+                                    {% set profit_margin = (total_profit / total_revenue * 100) if total_revenue > 0 else 0 %}
+                                    <h3 class="card-text">{{ profit_margin|round(1) }}%</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Monthly Sales Chart
+        var ctx = document.getElementById('monthlySalesChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ month_names|tojson }},
+                datasets: [
+                    {
+                        label: 'Items Sold',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        data: {{ monthly_counts|tojson }},
+                        yAxisID: 'y-axis-1',
+                    },
+                    {
+                        label: 'Revenue ($)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 2,
+                        data: {{ monthly_revenue|tojson }},
+                        yAxisID: 'y-axis-2',
+                    },
+                    {
+                        label: 'Profit ($)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        data: {{ monthly_profit|tojson }},
+                        yAxisID: 'y-axis-2',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    yAxes: [
+                        {
+                            id: 'y-axis-1',
+                            type: 'linear',
+                            position: 'left',
+                            ticks: {
+                                beginAtZero: true
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Items Sold'
+                            }
+                        },
+                        {
+                            id: 'y-axis-2',
+                            type: 'linear',
+                            position: 'right',
+                            ticks: {
+                                beginAtZero: true,
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            },
+                            scaleLabel: {
+                                display: true,
+                                labelString: 'Amount ($)'
+                            },
+                            gridLines: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    ]
+                },
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem, data) {
+                            var dataset = data.datasets[tooltipItem.datasetIndex];
+                            var value = dataset.data[tooltipItem.index];
+                            if (dataset.yAxisID === 'y-axis-2') {
+                                return dataset.label + ': $' + value.toFixed(2);
+                            } else {
+                                return dataset.label + ': ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Profit Margin Chart
+        var revData = {{ monthly_revenue|tojson }};
+        var profitData = {{ monthly_profit|tojson }};
+        var marginData = [];
+        
+        for (var i = 0; i < revData.length; i++) {
+            marginData.push(revData[i] > 0 ? (profitData[i] / revData[i] * 100).toFixed(1) : 0);
+        }
+        
+        var ctxMargin = document.getElementById('profitMarginChart').getContext('2d');
+        var marginChart = new Chart(ctxMargin, {
+            type: 'bar',
+            data: {
+                labels: {{ month_names|tojson }},
+                datasets: [{
+                    label: 'Profit Margin (%)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    data: marginData
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Profit Margin (%)'
+                        }
+                    }]
+                },
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem, data) {
+                            return data.datasets[tooltipItem.datasetIndex].label + ': ' + tooltipItem.yLabel + '%';
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

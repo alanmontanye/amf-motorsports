@@ -1,0 +1,103 @@
+<!-- Bulk Move Modal -->
+<div class="modal fade" id="bulkMoveModal" tabindex="-1" role="dialog" aria-labelledby="bulkMoveModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulkMoveModalLabel">Bulk Move Parts Between Storage Locations</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form method="POST" action="{{ url_for('atv.bulk_move_storage') }}" id="bulkMoveForm">
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          
+          <p class="mb-3">
+            Move all parts from one storage location to another. This is useful when consolidating 
+            partially empty totes or reorganizing your inventory.
+          </p>
+          
+          <div class="form-group row">
+            <label for="source_id_modal" class="col-sm-3 col-form-label">Source Storage:</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="source_id_modal" name="source_id" required>
+                <option value="">Select source storage...</option>
+                {% for storage in storages %}
+                <option value="{{ storage.id }}" data-parts-count="{{ storage.parts_count() }}">
+                  {{ storage.name }} ({{ storage.parts_count() }} parts)
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group row">
+            <label for="destination_id_modal" class="col-sm-3 col-form-label">Destination Storage:</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="destination_id_modal" name="destination_id" required>
+                <option value="">Select destination storage...</option>
+                {% for storage in storages %}
+                <option value="{{ storage.id }}">{{ storage.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          
+          <div class="alert alert-info" id="move-summary-modal" style="display: none;">
+            Moving <span id="parts-count-modal">0</span> parts from 
+            <span id="source-name-modal"></span> to <span id="destination-name-modal"></span>.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="move-btn-modal" disabled>
+            <i class="fas fa-exchange-alt"></i> Move Parts
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(document).ready(function() {
+    // Function to update the move summary in the modal
+    function updateModalMoveSummary() {
+      var sourceId = $('#source_id_modal').val();
+      var destinationId = $('#destination_id_modal').val();
+      
+      if (sourceId && destinationId && sourceId !== destinationId) {
+        var sourceOption = $('#source_id_modal option:selected');
+        var destinationOption = $('#destination_id_modal option:selected');
+        
+        var sourceName = sourceOption.text().split(' (')[0];
+        var destinationName = destinationOption.text();
+        var partsCount = sourceOption.data('parts-count');
+        
+        $('#source-name-modal').text(sourceName);
+        $('#destination-name-modal').text(destinationName);
+        $('#parts-count-modal').text(partsCount);
+        
+        $('#move-summary-modal').show();
+        $('#move-btn-modal').prop('disabled', partsCount === 0);
+      } else {
+        $('#move-summary-modal').hide();
+        $('#move-btn-modal').prop('disabled', true);
+      }
+    }
+    
+    // Handle selection changes in the modal
+    $('#source_id_modal, #destination_id_modal').change(function() {
+      updateModalMoveSummary();
+      
+      // Prevent selecting the same source and destination
+      var sourceId = $('#source_id_modal').val();
+      var destinationId = $('#destination_id_modal').val();
+      
+      if (sourceId && destinationId && sourceId === destinationId) {
+        alert('Source and destination storage cannot be the same.');
+        $('#destination_id_modal').val('');
+      }
+    });
+  });
+</script>

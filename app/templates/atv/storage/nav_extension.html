@@ -1,0 +1,14 @@
+<!-- Storage Management Dropdown Items -->
+<li class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle" href="#" id="storageDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <i class="fas fa-boxes"></i> Storage
+  </a>
+  <div class="dropdown-menu" aria-labelledby="storageDropdown">
+    <a class="dropdown-item" href="{{ url_for('atv.storage_list') }}">
+      <i class="fas fa-list"></i> Storage Locations
+    </a>
+    <a class="dropdown-item" href="{{ url_for('atv.bulk_move_storage') }}">
+      <i class="fas fa-exchange-alt"></i> Bulk Move Parts
+    </a>
+  </div>
+</li>

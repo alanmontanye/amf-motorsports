@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">eBay Listing Templates</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <p>Create and manage reusable templates for your eBay listings. Templates help you maintain consistent formatting and content across your listings.</p>
+                    <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#createTemplateModal">
+                        <i class="fas fa-plus"></i> Create New Template
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% if templates %}
+        {% for template in templates %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ template.name }}</h5>
+                    <div class="badge {% if template.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                        {% if template.is_active %}Active{% else %}Inactive{% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ template.description or 'No description provided.' }}</p>
+                    <p><strong>Default Category:</strong> {{ template.default_category_id or 'None' }}</p>
+                    <p><small class="text-muted">Created: {{ template.created_at.strftime('%Y-%m-%d') }}</small></p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group btn-block">
+                        <a href="#" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#viewTemplateModal" 
+                            data-template-id="{{ template.id }}" 
+                            data-template-name="{{ template.name }}"
+                            data-template-html="{{ template.html_content }}">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editTemplateModal"
+                            data-template-id="{{ template.id }}">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-danger template-delete-btn" 
+                            data-template-id="{{ template.id }}"
+                            data-template-name="{{ template.name }}">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No templates found. Create your first template to get started!
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Template Modal -->
+<div class="modal fade" id="createTemplateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Template</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('atv.create_ebay_template') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="template_name">Template Name</label>
+                        <input type="text" class="form-control" id="template_name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="template_description">Description</label>
+                        <textarea class="form-control" id="template_description" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="default_category">Default Category ID (Optional)</label>
+                        <input type="text" class="form-control" id="default_category" name="default_category_id" placeholder="e.g. 50063">
+                        <small class="form-text text-muted">Enter the eBay category ID for this template.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="html_content">HTML Template</label>
+                        <textarea class="form-control" id="html_content" name="html_content" rows="10" required></textarea>
+                        <small class="form-text text-muted">
+                            Use placeholders like {{title}}, {{description}}, {{condition}}, etc. These will be replaced with actual values when creating a listing.
+                        </small>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1" checked>
+                        <label class="form-check-label" for="is_active">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Template Modal -->
+<div class="modal fade" id="viewTemplateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="view-template-title">Template Preview</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="templateTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="html-tab" data-toggle="tab" href="#html-view" role="tab">HTML Source</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="preview-tab" data-toggle="tab" href="#preview" role="tab">Preview</a>
+                    </li>
+                </ul>
+                <div class="tab-content mt-2">
+                    <div class="tab-pane fade show active" id="html-view" role="tabpanel">
+                        <pre><code id="template-html-content" class="html"></code></pre>
+                    </div>
+                    <div class="tab-pane fade" id="preview" role="tabpanel">
+                        <div id="template-preview"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteTemplateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Template</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the template: <strong id="delete-template-name"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <form id="delete-template-form" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        // View Template Modal
+        $('#viewTemplateModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            var templateId = button.data('template-id');
+            var templateName = button.data('template-name');
+            var templateHtml = button.data('template-html');
+            
+            var modal = $(this);
+            modal.find('#view-template-title').text(templateName);
+            modal.find('#template-html-content').text(templateHtml);
+            
+            // Sample data for preview
+            var sampleData = {
+                title: '2018 Honda TRX450R Front Brake Caliper',
+                description: 'Good condition front brake caliper removed from a 2018 Honda TRX450R. Has minor wear but works perfectly.',
+                price: '49.99',
+                condition: 'Used'
+            };
+            
+            // Replace placeholders for preview
+            var previewHtml = templateHtml;
+            for (var key in sampleData) {
+                var regex = new RegExp('{{\\s*' + key + '\\s*}}', 'g');
+                previewHtml = previewHtml.replace(regex, sampleData[key]);
+            }
+            
+            modal.find('#template-preview').html(previewHtml);
+        });
+        
+        // Delete Template
+        $('.template-delete-btn').click(function() {
+            var templateId = $(this).data('template-id');
+            var templateName = $(this).data('template-name');
+            
+            $('#delete-template-name').text(templateName);
+            $('#delete-template-form').attr('action', '/atv/ebay/template/' + templateId + '/delete');
+            
+            $('#deleteTemplateModal').modal('show');
+        });
+    });
+</script>
+{% endblock %}

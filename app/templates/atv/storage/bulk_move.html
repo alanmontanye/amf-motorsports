@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Bulk Move Parts Between Storage Locations</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Move All Parts from One Storage to Another</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-4">
+                This tool allows you to move all parts from one storage location to another. 
+                This is useful when consolidating partially empty totes or reorganizing your inventory.
+            </p>
+            
+            <form method="POST" action="{{ url_for('atv.bulk_move_storage') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group row">
+                    <label for="source_id" class="col-sm-3 col-form-label">Source Storage:</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" id="source_id" name="source_id" required>
+                            <option value="">Select source storage...</option>
+                            {% for storage in storages %}
+                            <option value="{{ storage.id }}" data-parts-count="{{ storage.stored_parts.count() }}">
+                                {{ storage.name }} ({{ storage.stored_parts.count() }} parts)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group row">
+                    <label for="destination_id" class="col-sm-3 col-form-label">Destination Storage:</label>
+                    <div class="col-sm-9">
+                        <select class="form-control" id="destination_id" name="destination_id" required>
+                            <option value="">Select destination storage...</option>
+                            {% for storage in storages %}
+                            <option value="{{ storage.id }}">{{ storage.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info" id="move-summary" style="display: none;">
+                    Moving <span id="parts-count">0</span> parts from 
+                    <span id="source-name"></span> to <span id="destination-name"></span>.
+                </div>
+                
+                <div class="form-group row mt-4">
+                    <div class="col-sm-9 offset-sm-3">
+                        <button type="submit" class="btn btn-primary" id="move-btn" disabled>
+                            <i class="fas fa-exchange-alt"></i> Move Parts
+                        </button>
+                        <a href="{{ url_for('atv.storage_list') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        // Update the move summary when selections change
+        function updateMoveSummary() {
+            var sourceId = $('#source_id').val();
+            var destinationId = $('#destination_id').val();
+            
+            if (sourceId && destinationId && sourceId !== destinationId) {
+                var sourceOption = $('#source_id option:selected');
+                var destinationOption = $('#destination_id option:selected');
+                
+                var sourceName = sourceOption.text().split(' (')[0];
+                var destinationName = destinationOption.text().split(' (')[0];
+                var partsCount = sourceOption.data('parts-count');
+                
+                $('#source-name').text(sourceName);
+                $('#destination-name').text(destinationName);
+                $('#parts-count').text(partsCount);
+                
+                $('#move-summary').show();
+                $('#move-btn').prop('disabled', partsCount === 0);
+            } else {
+                $('#move-summary').hide();
+                $('#move-btn').prop('disabled', true);
+            }
+        }
+        
+        $('#source_id, #destination_id').change(function() {
+            updateMoveSummary();
+            
+            // Prevent selecting the same source and destination
+            var sourceId = $('#source_id').val();
+            var destinationId = $('#destination_id').val();
+            
+            if (sourceId && destinationId && sourceId === destinationId) {
+                alert('Source and destination storage cannot be the same.');
+                $('#destination_id').val('');
+            }
+        });
+    });
+</script>
+{% endblock %}

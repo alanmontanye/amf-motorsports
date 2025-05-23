@@ -1,10 +1,242 @@
 """eBay integration routes"""
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from app.atv import bp
-from app.models import Part, EbayListing, Image
+from app.models import Part, EbayListing, Image, ATV, EbayCredentials, EbayCategory, EbayTemplate
 from app.atv.ebay_forms import EbayListingForm
 from app import db
 from datetime import datetime
+import json
+import calendar
+import logging
+
+@bp.route('/ebay/dashboard')
+def ebay_dashboard():
+    """eBay dashboard showing all listings"""
+    # Get filter parameters
+    atv_id = request.args.get('atv_id', None, type=int)
+    
+    # Get ATVs for filter dropdown
+    atvs = ATV.query.order_by(ATV.year.desc(), ATV.make, ATV.model).all()
+    
+    # Get active listings
+    active_listings_query = EbayListing.query.filter(EbayListing.status.in_(['active', 'pending']))
+    active_listings = active_listings_query.all()
+    active_count = len(active_listings)
+    active_value = sum(listing.price for listing in active_listings)
+    
+    # Split into active and pending
+    pending_listings = [l for l in active_listings if l.status == 'pending']
+    active_listings = [l for l in active_listings if l.status == 'active']
+    pending_count = len(pending_listings)
+    
+    # Get sold listings
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    sold_listings_query = EbayListing.query.filter(EbayListing.status == 'sold')
+    sold_listings_query = sold_listings_query.filter(
+        db.extract('year', EbayListing.updated_at) == current_year,
+        db.extract('month', EbayListing.updated_at) == current_month
+    )
+    sold_listings = sold_listings_query.all()
+    sold_count = len(sold_listings)
+    
+    # Calculate total revenue from sold items
+    sold_revenue = 0
+    for listing in sold_listings:
+        part = Part.query.get(listing.part_id)
+        if part and part.sold_price:
+            sold_revenue += part.sold_price
+    
+    # Get parts eligible for eBay listing
+    eligible_parts_query = Part.query.filter(Part.status == 'in_stock')
+    
+    # Apply ATV filter if specified
+    if atv_id:
+        eligible_parts_query = eligible_parts_query.filter(Part.atv_id == atv_id)
+    
+    eligible_parts = eligible_parts_query.all()
+    
+    # Filter out parts that are already on eBay
+    eligible_parts = [p for p in eligible_parts if not p.is_on_ebay()]
+    
+    return render_template('atv/ebay/dashboard.html',
+                          title='eBay Dashboard',
+                          active_listings=active_listings,
+                          pending_listings=pending_listings,
+                          sold_listings=sold_listings,
+                          active_count=active_count,
+                          pending_count=pending_count,
+                          sold_count=sold_count,
+                          active_value=active_value,
+                          sold_revenue=sold_revenue,
+                          eligible_parts=eligible_parts,
+                          atvs=atvs)
+
+@bp.route('/ebay/bulk-list', methods=['POST'])
+def bulk_list_on_ebay():
+    """Create eBay listings for multiple parts at once"""
+    part_ids = request.form.getlist('part_ids')
+    
+    if not part_ids:
+        flash('No parts selected for listing.', 'warning')
+        return redirect(url_for('atv.ebay_dashboard'))
+    
+    created_count = 0
+    skipped_count = 0
+    
+    for part_id in part_ids:
+        part = Part.query.get(part_id)
+        
+        if not part or not part.can_list_on_ebay():
+            skipped_count += 1
+            continue
+        
+        # Create title from ATV info and part name
+        title = f"{part.atv.year} {part.atv.make} {part.atv.model} {part.name}"
+        if len(title) > 80:
+            title = title[:77] + "..."
+        
+        # Map condition
+        condition = 'Used'
+        if part.condition == 'new':
+            condition = 'New'
+        elif part.condition == 'used_poor':
+            condition = 'For parts or not working'
+        
+        # Create eBay listing record
+        listing = EbayListing(
+            title=title,
+            price=part.list_price or 0,
+            status='pending',
+            part_id=part.id,
+            listing_data=json.dumps({
+                'condition': condition,
+                'description': part.description or '',
+                'format': 'fixed_price',
+                'duration': '30'
+            })
+        )
+        
+        # Update part status
+        part.status = 'listed'
+        part.platform = 'ebay'
+        
+        db.session.add(listing)
+        created_count += 1
+    
+    db.session.commit()
+    
+    if created_count > 0:
+        flash(f'Successfully created {created_count} eBay listings.', 'success')
+    
+    if skipped_count > 0:
+        flash(f'Skipped {skipped_count} parts that were not eligible for listing.', 'warning')
+    
+    return redirect(url_for('atv.ebay_dashboard'))
+
+@bp.route('/ebay/settings', methods=['GET', 'POST'])
+def ebay_settings():
+    """Manage eBay API settings"""
+    # Get existing credentials if any
+    credentials = EbayCredentials.query.first()
+    
+    if request.method == 'POST':
+        # Handle form submission
+        client_id = request.form.get('client_id')
+        client_secret = request.form.get('client_secret')
+        environment = request.form.get('environment', 'sandbox')
+        
+        if not credentials:
+            credentials = EbayCredentials()
+        
+        credentials.client_id = client_id
+        credentials.client_secret = client_secret
+        credentials.environment = environment
+        
+        # Save default policies
+        credentials.default_return_policy = request.form.get('return_policy', '30_days')
+        credentials.default_shipping_policy = request.form.get('shipping_policy', 'calculated')
+        credentials.default_payment_policy = request.form.get('payment_policy', 'immediate')
+        
+        db.session.add(credentials)
+        db.session.commit()
+        
+        flash('eBay settings updated successfully!', 'success')
+        return redirect(url_for('atv.ebay_dashboard'))
+    
+    return render_template('atv/ebay/settings.html',
+                          title='eBay Settings',
+                          credentials=credentials)
+
+@bp.route('/ebay/templates', methods=['GET'])
+def ebay_templates():
+    """Manage eBay listing templates"""
+    templates = EbayTemplate.query.all()
+    return render_template('atv/ebay/templates.html',
+                          title='eBay Templates',
+                          templates=templates)
+
+@bp.route('/ebay/analytics', methods=['GET'])
+def ebay_analytics():
+    """View eBay sales analytics"""
+    # Get monthly sales data
+    now = datetime.now()
+    current_year = now.year
+    
+    # Get month names
+    month_names = list(calendar.month_name)[1:]
+    
+    # Initialize monthly data
+    monthly_data = {month: {'count': 0, 'revenue': 0, 'profit': 0} for month in range(1, 13)}
+    
+    # Get all sold listings for current year
+    sold_listings = EbayListing.query.filter(
+        EbayListing.status == 'sold',
+        db.extract('year', EbayListing.updated_at) == current_year
+    ).all()
+    
+    # Populate monthly data
+    for listing in sold_listings:
+        part = Part.query.get(listing.part_id)
+        if not part or not part.sold_price:
+            continue
+            
+        month = listing.updated_at.month
+        monthly_data[month]['count'] += 1
+        monthly_data[month]['revenue'] += part.sold_price
+        monthly_data[month]['profit'] += part.net_profit()
+    
+    # Format for chart.js
+    monthly_counts = [monthly_data[m]['count'] for m in range(1, 13)]
+    monthly_revenue = [monthly_data[m]['revenue'] for m in range(1, 13)]
+    monthly_profit = [monthly_data[m]['profit'] for m in range(1, 13)]
+    
+    # Get top selling parts
+    top_parts = db.session.query(
+        Part.name, db.func.count(EbayListing.id).label('count')
+    ).join(EbayListing).filter(
+        EbayListing.status == 'sold'
+    ).group_by(Part.name).order_by(db.desc('count')).limit(5).all()
+    
+    return render_template('atv/ebay/analytics.html',
+                          title='eBay Analytics',
+                          month_names=month_names,
+                          monthly_counts=monthly_counts,
+                          monthly_revenue=monthly_revenue,
+                          monthly_profit=monthly_profit,
+                          top_parts=top_parts)
+
+@bp.route('/ebay/sync', methods=['POST'])
+def sync_ebay_listings():
+    """Sync listings with eBay API"""
+    try:
+        # This will be implemented when eBay API integration is ready
+        # For now, we'll just return a success message
+        return jsonify({'success': True, 'message': 'Synchronization not implemented yet.'})
+    except Exception as e:
+        logging.error(f"Error syncing eBay listings: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/part/<int:part_id>/ebay/create', methods=['GET', 'POST'])
 def create_ebay_listing(part_id):

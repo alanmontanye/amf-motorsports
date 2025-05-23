@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4><i class="fas fa-shopping-cart mr-2"></i>eBay Order #{{ order.ebay_order_id }}</h4>
+                <div>
+                    {% if order.status == 'AWAITING_SHIPMENT' %}
+                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#shippingModal">
+                        <i class="fas fa-truck mr-1"></i> Mark as Shipped
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('atv.ebay_dashboard') }}" class="btn btn-light">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Order Status Banner -->
+                <div class="alert 
+                    {% if order.status == 'PAID' or order.status == 'AWAITING_SHIPMENT' %}alert-warning
+                    {% elif order.status == 'SHIPPED' %}alert-info
+                    {% elif order.status == 'DELIVERED' %}alert-success
+                    {% else %}alert-secondary
+                    {% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <strong>Status: 
+                                {% if order.status == 'PAID' %}
+                                Payment Received
+                                {% elif order.status == 'AWAITING_SHIPMENT' %}
+                                Ready to Ship
+                                {% elif order.status == 'SHIPPED' %}
+                                Shipped
+                                {% elif order.status == 'DELIVERED' %}
+                                Delivered
+                                {% else %}
+                                {{ order.status }}
+                                {% endif %}
+                            </strong>
+                        </h5>
+                        {% if order.status == 'SHIPPED' and order.tracking_number %}
+                        <div>
+                            <span class="badge bg-info">{{ order.carrier }}</span>
+                            <span class="badge bg-secondary">{{ order.tracking_number }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Order Details -->
+                <div class="row mb-4">
+                    <!-- Order Summary -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Order Summary</h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table">
+                                    <tr>
+                                        <th>Order Date:</th>
+                                        <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Amount:</th>
+                                        <td>${{ "%.2f"|format(order.total_price) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Payment Status:</th>
+                                        <td>
+                                            {% if order.payment_status == 'PAID' %}
+                                            <span class="badge bg-success">Paid</span>
+                                            {% else %}
+                                            <span class="badge bg-warning">{{ order.payment_status }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% if order.payment_date %}
+                                    <tr>
+                                        <th>Payment Date:</th>
+                                        <td>{{ order.payment_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if order.status == 'SHIPPED' %}
+                                    <tr>
+                                        <th>Shipped Date:</th>
+                                        <td>{{ order.shipped_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Carrier:</th>
+                                        <td>{{ order.carrier }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tracking:</th>
+                                        <td>
+                                            <a href="{{ tracking_url(order.carrier, order.tracking_number) }}" target="_blank">
+                                                {{ order.tracking_number }}
+                                                <i class="fas fa-external-link-alt ml-1"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Buyer Info -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5>Buyer Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Name:</strong> {{ order.buyer_name }}</p>
+                                <p><strong>Username:</strong> {{ order.buyer_username }}</p>
+                                <p><strong>Email:</strong> {{ order.buyer_email }}</p>
+                                
+                                <hr>
+                                
+                                <h6>Shipping Address:</h6>
+                                <address>
+                                    {{ order.shipping_address_name }}<br>
+                                    {{ order.shipping_street1 }}<br>
+                                    {% if order.shipping_street2 %}
+                                    {{ order.shipping_street2 }}<br>
+                                    {% endif %}
+                                    {{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_postal_code }}<br>
+                                    {{ order.shipping_country }}
+                                </address>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Items -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Order Items</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%">Item ID</th>
+                                        <th style="width: 40%">Title</th>
+                                        <th style="width: 10%">Quantity</th>
+                                        <th style="width: 15%">Price</th>
+                                        <th style="width: 15%">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in order_items %}
+                                    <tr>
+                                        <td>{{ item.ebay_item_id }}</td>
+                                        <td>{{ item.title }}</td>
+                                        <td>{{ item.quantity }}</td>
+                                        <td>${{ "%.2f"|format(item.price) }}</td>
+                                        <td>${{ "%.2f"|format(item.price * item.quantity) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3"></td>
+                                        <td><strong>Subtotal</strong></td>
+                                        <td>${{ "%.2f"|format(order.subtotal) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"></td>
+                                        <td><strong>Shipping</strong></td>
+                                        <td>${{ "%.2f"|format(order.shipping_cost) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"></td>
+                                        <td><strong>Tax</strong></td>
+                                        <td>${{ "%.2f"|format(order.tax) }}</td>
+                                    </tr>
+                                    <tr class="table-primary">
+                                        <td colspan="3"></td>
+                                        <td><strong>Total</strong></td>
+                                        <td><strong>${{ "%.2f"|format(order.total_price) }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shipping Modal -->
+<div class="modal fade" id="shippingModal" tabindex="-1" role="dialog" aria-labelledby="shippingModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="shippingModalLabel">Mark Order as Shipped</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('atv.mark_shipped', order_id=order.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Enter shipping details to mark this order as shipped. This information will be sent to eBay and the buyer will be notified.
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="carrier">Shipping Carrier</label>
+                        <select class="form-control" id="carrier" name="carrier" required>
+                            <option value="">Select a carrier</option>
+                            <option value="USPS">USPS</option>
+                            <option value="UPS">UPS</option>
+                            <option value="FedEx">FedEx</option>
+                            <option value="DHL">DHL</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tracking_number">Tracking Number</label>
+                        <input type="text" class="form-control" id="tracking_number" name="tracking_number" placeholder="Enter tracking number" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-truck mr-1"></i> Mark as Shipped
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function tracking_url(carrier, tracking) {
+        if (!tracking) return '#';
+        
+        switch(carrier) {
+            case 'USPS':
+                return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`;
+            case 'UPS':
+                return `https://www.ups.com/track?tracknum=${tracking}`;
+            case 'FedEx':
+                return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${tracking}`;
+            case 'DHL':
+                return `https://www.dhl.com/en/express/tracking.html?AWB=${tracking}`;
+            default:
+                return '#';
+        }
+    }
+</script>
+{% endblock %}

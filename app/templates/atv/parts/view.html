@@ -29,9 +29,16 @@
                     <!-- eBay Action Buttons -->
                     <div class="btn-group">
                         {% if part.status == 'in_stock' %}
-                        <a href="{{ url_for('atv.create_ebay_listing', part_id=part.id) }}" class="btn btn-sm btn-primary">
-                            List on eBay
-                        </a>
+                        <div class="btn-group">
+                            <a href="{{ url_for('atv.create_ebay_listing', part_id=part.id) }}" class="btn btn-sm btn-primary">
+                                List on eBay
+                            </a>
+                            <form action="{{ url_for('atv.generate_description', part_id=part.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-info">
+                                    <i class="fas fa-magic"></i> AI Description
+                                </button>
+                            </form>
+                        </div>
                         {% elif part.status == 'listed' and part.platform == 'ebay' %}
                         {% set listing = part.ebay_listings.first() %}
                         {% if listing %}

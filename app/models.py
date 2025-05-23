@@ -15,6 +15,19 @@ class Storage(db.Model):
     def stored_parts(self):
         return self.parts
     
+    def parts_count(self):
+        """Get the number of parts in this storage location"""
+        return self.parts.count()
+    
+    def get_parts_info(self):
+        """Get summary information about parts in this storage"""
+        total_parts = self.parts_count()
+        value = sum(part.list_price or 0 for part in self.parts)
+        return {
+            'count': total_parts,
+            'value': value
+        }
+    
     def __repr__(self):
         return f"<Storage {self.name}>"
 
@@ -144,6 +157,24 @@ class Part(db.Model):
         fees = self.platform_fees or 0
         
         return self.sold_price - cost_basis - shipping - fees
+        
+    def is_on_ebay(self):
+        """Check if this part is currently listed on eBay"""
+        return self.status == 'listed' and self.platform == 'ebay' and self.ebay_listings.count() > 0
+    
+    def get_active_ebay_listing(self):
+        """Get the active eBay listing for this part, if any"""
+        if not self.is_on_ebay():
+            return None
+        return self.ebay_listings.filter(EbayListing.status.in_(['pending', 'active'])).first()
+    
+    def can_list_on_ebay(self):
+        """Check if this part is eligible to be listed on eBay"""
+        return self.status in ['in_stock'] and not self.is_on_ebay()
+        
+    def can_remove_from_ebay(self):
+        """Check if this part can be removed from eBay"""
+        return self.is_on_ebay()
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
