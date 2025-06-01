@@ -3,7 +3,7 @@ from flask import Blueprint
 bp = Blueprint('atv', __name__, url_prefix='/atv')
 
 # Import all route modules
-from .routes import atv
+from . import routes
 from .parts import parts_bp
 from .parting import parting_bp
 from .parts_bulk import parts_bulk_bp
