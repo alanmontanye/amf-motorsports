@@ -1,15 +1,11 @@
 from flask import Blueprint, request, flash, redirect, url_for, jsonify, render_template
-from flask_login import login_required, current_user
 from app import db
 from app.models import ATV, Part
-from app.utils import admin_required
 import uuid
 
 parting_bp = Blueprint('parting', __name__)
 
 @parting_bp.route('/change_parting_status/<int:id>', methods=['POST'])
-@login_required
-@admin_required
 def change_parting_status(id):
     """Change the parting status of an ATV"""
     atv = ATV.query.get_or_404(id)
@@ -49,7 +45,6 @@ def change_parting_status(id):
 
 
 @parting_bp.route('/parting_dashboard')
-@login_required
 def parting_dashboard():
     """Dashboard showing ATVs in various parting stages"""
     parting_out_atvs = ATV.query.filter_by(parting_status='parting_out').all()

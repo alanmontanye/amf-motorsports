@@ -128,10 +128,43 @@ class ImageUploadForm(FlaskForm):
 
 class BulkPartForm(FlaskForm):
     """Form for adding multiple parts at once"""
-    atv_id = SelectField('ATV', coerce=int, validators=[DataRequired()])
-    tote = StringField('Tote ID', validators=[Optional(), Length(max=20)])
-    storage_id = SelectField('Storage Location', coerce=int, validators=[Optional()])
-    submit = SubmitField('Save All Parts')
+    storage_id = SelectField('Storage Location', coerce=int, validators=[DataRequired()])
+    tote = StringField('Tote (shared for all parts)')
+    
+    # Part 1
+    part1_name = StringField('Part 1 Name')
+    part1_description = TextAreaField('Part 1 Description')
+    part1_condition = SelectField('Part 1 Condition', choices=[
+        ('', '-- Select Condition --'),
+        ('new', 'New'),
+        ('used_good', 'Used - Good'),
+        ('used_fair', 'Used - Fair'),
+        ('used_poor', 'Used - Poor')
+    ])
+    
+    # Part 2
+    part2_name = StringField('Part 2 Name')
+    part2_description = TextAreaField('Part 2 Description')
+    part2_condition = SelectField('Part 2 Condition', choices=[
+        ('', '-- Select Condition --'),
+        ('new', 'New'),
+        ('used_good', 'Used - Good'),
+        ('used_fair', 'Used - Fair'),
+        ('used_poor', 'Used - Poor')
+    ])
+    
+    # Part 3
+    part3_name = StringField('Part 3 Name')
+    part3_description = TextAreaField('Part 3 Description')
+    part3_condition = SelectField('Part 3 Condition', choices=[
+        ('', '-- Select Condition --'),
+        ('new', 'New'),
+        ('used_good', 'Used - Good'),
+        ('used_fair', 'Used - Fair'),
+        ('used_poor', 'Used - Poor')
+    ])
+    
+    submit = SubmitField('Add Parts')
 
 
 class QuickEditPartForm(FlaskForm):

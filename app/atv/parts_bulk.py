@@ -1,15 +1,12 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
 from app import db
 from app.models import ATV, Part, Storage
-from app.utils import admin_required
-from datetime import datetime
+from app.atv.forms import BulkPartForm
+import uuid
 
 parts_bulk_bp = Blueprint('parts_bulk', __name__)
 
 @parts_bulk_bp.route('/bulk_add_parts/<int:atv_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
 def bulk_add_parts(atv_id):
     """Add multiple parts to an ATV at once"""
     atv = ATV.query.get_or_404(atv_id)

@@ -1,15 +1,11 @@
 from flask import Blueprint, request, render_template, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
 from app import db
-from app.models import Part, Storage
-from app.utils import admin_required
+from app.models import Part
 from app.atv.forms import QuickEditPartForm
 
 quick_edit_bp = Blueprint('quick_edit', __name__)
 
 @quick_edit_bp.route('/part/quick_edit/<int:part_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
 def quick_edit_part(part_id):
     """Quick edit a part with minimal fields for fast updates"""
     part = Part.query.get_or_404(part_id)
@@ -59,8 +55,6 @@ def quick_edit_part(part_id):
 
 
 @quick_edit_bp.route('/part/inline_edit/<int:part_id>', methods=['GET'])
-@login_required
-@admin_required
 def get_inline_edit_form(part_id):
     """Get the inline edit form for a part via AJAX"""
     part = Part.query.get_or_404(part_id)
