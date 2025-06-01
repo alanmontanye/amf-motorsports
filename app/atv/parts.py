@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, request, current_app, flash
+from flask import render_template, redirect, url_for, request, current_app, flash, jsonify
 from werkzeug.utils import secure_filename
 import os
 from app.atv import bp
@@ -17,7 +17,9 @@ def parts_list():
     status = request.args.get('status')
     condition = request.args.get('condition')
     platform = request.args.get('platform')
+    tote = request.args.get('tote')
     sort_by = request.args.get('sort_by', 'newest')
+    view_mode = request.args.get('view_mode', 'grid')
 
     # Start with base query
     query = Part.query.join(ATV)
@@ -27,7 +29,7 @@ def parts_list():
         query = query.filter(Part.atv_id == atv_id)
     else:
         # Only show parts from ATVs that are being parted out or have been parted out
-        query = query.filter(ATV.status.in_(['parting_out', 'parted_out']))
+        query = query.filter(ATV.parting_status.in_(['parting_out', 'parted_out']))
 
     if storage_id:
         query = query.filter(Part.storage_id == storage_id)
@@ -37,6 +39,8 @@ def parts_list():
         query = query.filter(Part.condition == condition)
     if platform:
         query = query.filter(Part.platform == platform)
+    if tote:
+        query = query.filter(Part.tote == tote)
 
     # Apply sorting
     if sort_by == 'newest':
@@ -47,17 +51,26 @@ def parts_list():
         query = query.order_by(Part.list_price.desc())
     elif sort_by == 'name':
         query = query.order_by(Part.name.asc())
+    elif sort_by == 'tote':
+        query = query.order_by(Part.tote.asc(), Part.name.asc())
+    elif sort_by == 'atv':
+        query = query.order_by(ATV.year.desc(), ATV.make.asc(), ATV.model.asc(), Part.name.asc())
 
     # Execute query
     parts = query.all()
 
     # Get list of ATVs being parted out
-    parting_atvs = ATV.query.filter(ATV.status.in_(['parting_out', 'parted_out'])).order_by(
+    parting_atvs = ATV.query.filter(ATV.parting_status.in_(['parting_out', 'parted_out'])).order_by(
         ATV.year.desc(), ATV.make.asc(), ATV.model.asc()
     ).all()
 
     # Get all storage locations
     storages = Storage.query.order_by(Storage.name.asc()).all()
+    
+    # Get distinct totes for filtering
+    distinct_totes = db.session.query(Part.tote).distinct().filter(Part.tote.isnot(None))
+    totes = [t[0] for t in distinct_totes if t[0]] # Filter out None/empty values
+    totes.sort()
 
     # Calculate total value
     total_value = sum(
@@ -65,30 +78,39 @@ def parts_list():
         for part in parts
         if (part.status != 'sold' and part.list_price) or (part.status == 'sold' and part.sold_price)
     )
+    
+    # Get status counts for summary
+    status_counts = {
+        'all': len(parts),
+        'in_stock': sum(1 for part in parts if part.status == 'in_stock'),
+        'listed': sum(1 for part in parts if part.status == 'listed'),
+        'reserved': sum(1 for part in parts if part.status == 'reserved'),
+        'sold': sum(1 for part in parts if part.status == 'sold')
+    }
 
-    # Check if the template exists, otherwise fall back to a more common path
     template_vars = {
         'title': 'Parts List',
         'parts': parts,
         'parting_atvs': parting_atvs,
         'storages': storages,
+        'totes': totes,
         'total_value': total_value,
+        'status_counts': status_counts,
         'selected_atv_id': atv_id,
         'selected_storage_id': storage_id,
         'selected_status': status,
         'selected_condition': condition,
         'selected_platform': platform,
-        'sort_by': sort_by
+        'selected_tote': tote,
+        'sort_by': sort_by,
+        'view_mode': view_mode
     }
     
-    # Instead of cascading through multiple templates with try/except, let's use
-    # a simplified approach with a list of templates to try
+    # Try the template with view_mode first, then fall back to regular template
     templates_to_try = [
-        'atv/parts/index.html',  # Original path
-        'atv/part/index.html',   # Alternative path (no 's')
-        'atv/index_parts.html',  # Flattened path
-        'atv/parts_list.html',   # Alternative name
-        'atv/parts_error.html'   # Final fallback
+        f'atv/parts/index_{view_mode}.html',  # View-mode specific (grid/list/table)
+        'atv/parts/index.html',               # Original path
+        'atv/parts_list.html',                # Alternative name
     ]
     
     # Try each template in order
@@ -100,8 +122,8 @@ def parts_list():
             current_app.logger.error(f"Failed to render template {template}: {str(e)}")
             last_error = e
     
-    # If we get here, none of the templates worked, so show the simplest possible error
-    return f"<h1>Parts List</h1><p>Error loading parts template: {str(last_error)}</p>"
+    # If we get here, none of the templates worked, use a simplified fallback
+    return render_template('atv/parts_error.html', error=str(last_error), **template_vars)
 
 @bp.route('/<int:atv_id>/parts')
 def atv_parts(atv_id):
@@ -269,40 +291,26 @@ def add_part(atv_id):
         <div style="margin-bottom: 15px;">
             <button type="submit" class="btn btn-primary">Add Part</button>
             <a href="{url_for('atv.view_atv', id=atv.id)}" class="btn btn-secondary">Cancel</a>
-        </div>
     </form>
     """
     return html
 
-@bp.route('/part/<int:id>/edit', methods=['GET', 'POST'])
-def edit_part(id):
-    """Edit part details"""
-    part = Part.query.get_or_404(id)
+@bp.route('/part/<int:part_id>/edit', methods=['GET', 'POST'])
+def edit_part(part_id):
+    part = Part.query.get_or_404(part_id)
     form = PartForm(obj=part)
     
-    # Set storage choices
-    storages = Storage.query.order_by(Storage.name).all()
-    form.storage_id.choices = [(0, 'None')] + [(s.id, s.name) for s in storages]
+    # Get available ATVs and storage locations for selection
+    form.atv_id.choices = [(a.id, f"{a.year} {a.make} {a.model}") for a in ATV.query.all()]
+    form.storage_id.choices = [(0, 'None')] + [(s.id, s.name) for s in Storage.query.all()]
     
     if form.validate_on_submit():
-        # Calculate old profit if part was sold
-        old_profit = 0
-        if part.status == 'sold':
-            old_profit = (part.sold_price or 0) - (part.source_price or 0) - (part.shipping_cost or 0) - (part.platform_fees or 0)
+        form.populate_obj(part)
         
-        # Update basic info
-        storage_id = form.storage_id.data if form.storage_id.data != 0 else None
-        part.name = form.name.data
-        part.part_number = form.part_number.data
-        part.condition = form.condition.data
-        part.storage_id = storage_id
-        part.location = form.location.data
-        part.status = form.status.data
-        part.source_price = form.source_price.data
-        part.list_price = form.list_price.data
-        part.description = form.description.data
-
-        # Handle listing info
+        # Calculate/update any derived values
+        if part.status == 'sold' and part.sold_price and part.list_price:
+            # Calculate profit margin
+            part.profit_margin = (part.sold_price - part.list_price) / part.list_price * 100 if part.list_price > 0 else 0
         if form.status.data == 'listed':
             part.platform = form.platform.data
             part.listing_url = form.listing_url.data
@@ -531,3 +539,124 @@ def upload_part_image(id):
         flash('No images selected!', 'error')
     
     return redirect(url_for('atv.view_part', id=id))
+
+
+@bp.route('/part/<int:id>/quick-edit', methods=['GET', 'POST'])
+def quick_edit_part(id):
+    """Quick inline editing of a part with minimal fields"""
+    from app.atv.forms import QuickEditPartForm
+    
+    part = Part.query.get_or_404(id)
+    form = QuickEditPartForm(obj=part)
+    
+    # Handle AJAX requests differently
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            # Update only the fields in the quick edit form
+            part.name = form.name.data
+            part.condition = form.condition.data
+            part.status = form.status.data
+            part.tote = form.tote.data
+            part.list_price = form.list_price.data
+            
+            # Only set listing_date if we're changing to 'listed' status
+            if part.status == 'listed' and not part.listing_date:
+                part.listing_date = datetime.utcnow()
+            
+            db.session.commit()
+            
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'message': 'Part updated successfully',
+                    'part': {
+                        'id': part.id,
+                        'name': part.name,
+                        'condition': part.condition,
+                        'status': part.status,
+                        'tote': part.tote,
+                        'list_price': part.list_price
+                    }
+                })
+            
+            flash('Part updated successfully!', 'success')
+            # Determine where to redirect based on where the request came from
+            next_page = request.args.get('next') or url_for('atv.view_part', id=id)
+            return redirect(next_page)
+        elif is_ajax:
+            return jsonify({'success': False, 'errors': form.errors}), 400
+    
+    if is_ajax:
+        return render_template('atv/parts/quick_edit_form.html', form=form, part=part)
+    
+    return render_template('atv/parts/quick_edit.html', form=form, part=part)
+
+
+@bp.route('/bulk-add-parts', methods=['GET', 'POST'])
+def bulk_add_parts():
+    """Add multiple parts at once with shared properties like tote/ATV"""
+    from app.atv.forms import BulkPartForm
+    
+    form = BulkPartForm()
+    
+    # Set ATV and storage location choices
+    form.atv_id.choices = [(a.id, f"{a.year} {a.make} {a.model}") 
+                         for a in ATV.query.filter(ATV.parting_status.in_(['whole', 'parting_out'])).all()]
+    form.storage_id.choices = [(0, 'None')] + [(s.id, s.name) for s in Storage.query.all()]
+    
+    if request.method == 'POST':
+        # Process the bulk form itself
+        if form.validate_on_submit():
+            atv_id = form.atv_id.data
+            storage_id = form.storage_id.data if form.storage_id.data != 0 else None
+            tote = form.tote.data
+            
+            # Get the names and prices for each part from the form
+            part_names = request.form.getlist('part_name[]')
+            part_conditions = request.form.getlist('part_condition[]')
+            part_prices = request.form.getlist('part_price[]')
+            part_descriptions = request.form.getlist('part_description[]')
+            
+            # Mark the ATV as parting_out if it's currently whole
+            atv = ATV.query.get_or_404(atv_id)
+            if atv.parting_status == 'whole':
+                atv.parting_status = 'parting_out'
+            
+            # Create each part
+            parts_added = 0
+            for i in range(len(part_names)):
+                if part_names[i].strip():  # Only process non-empty names
+                    price = float(part_prices[i]) if part_prices[i] and part_prices[i].strip() else None
+                    
+                    part = Part(
+                        name=part_names[i].strip(),
+                        condition=part_conditions[i] if i < len(part_conditions) else 'used_good',
+                        tote=tote,
+                        list_price=price,
+                        description=part_descriptions[i] if i < len(part_descriptions) else '',
+                        atv_id=atv_id,
+                        storage_id=storage_id,
+                        status='in_stock'
+                    )
+                    db.session.add(part)
+                    parts_added += 1
+            
+            if parts_added > 0:
+                db.session.commit()
+                flash(f'{parts_added} parts added successfully!', 'success')
+                return redirect(url_for('atv.atv_parts', atv_id=atv_id))
+            else:
+                flash('No valid parts were found to add.', 'warning')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f'{getattr(form, field).label.text}: {error}', 'error')
+    
+    # Get the pre-selected ATV if specified in query parameters
+    selected_atv_id = request.args.get('atv_id', type=int)
+    if selected_atv_id:
+        form.atv_id.data = selected_atv_id
+    
+    return render_template('atv/parts/bulk_add.html', form=form, title='Bulk Add Parts')

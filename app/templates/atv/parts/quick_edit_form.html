@@ -1,0 +1,49 @@
+<!-- Quick Edit Form for AJAX requests -->
+<form id="quick-edit-form-{{ part.id }}" class="quick-edit-form" method="POST" action="{{ url_for('atv.quick_edit_part', id=part.id) }}">
+    {{ form.hidden_tag() }}
+    
+    <div class="form-group mb-2">
+        {{ form.name.label(class="form-label") }}
+        {{ form.name(class="form-control") }}
+        <div class="invalid-feedback" id="name-error"></div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group mb-2">
+                {{ form.condition.label(class="form-label") }}
+                {{ form.condition(class="form-control") }}
+                <div class="invalid-feedback" id="condition-error"></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group mb-2">
+                {{ form.status.label(class="form-label") }}
+                {{ form.status(class="form-control") }}
+                <div class="invalid-feedback" id="status-error"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group mb-2">
+                {{ form.tote.label(class="form-label") }}
+                {{ form.tote(class="form-control", placeholder="e.g. TOTE_A1") }}
+                <div class="invalid-feedback" id="tote-error"></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group mb-2">
+                {{ form.list_price.label(class="form-label") }}
+                {{ form.list_price(class="form-control") }}
+                <div class="invalid-feedback" id="list_price-error"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group mt-3">
+        {{ form.submit(class="btn btn-primary btn-sm") }}
+        <button type="button" class="btn btn-secondary btn-sm cancel-edit">Cancel</button>
+    </div>
+</form>

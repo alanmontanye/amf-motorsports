@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Parts Inventory</h1>
+        <div>
+            <a href="{{ url_for('atv.add_part') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Part</a>
+            <a href="{{ url_for('atv.bulk_add_parts') }}" class="btn btn-success"><i class="fas fa-layer-group"></i> Bulk Add Parts</a>
+        </div>
+    </div>
+    
+    <!-- Filters and Controls -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Filters</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('atv.parts_list', view_mode='grid') }}" class="btn btn-outline-secondary {{ 'active' if view_mode == 'grid' else '' }}"><i class="fas fa-th"></i> Grid</a>
+                    <a href="{{ url_for('atv.parts_list', view_mode='list') }}" class="btn btn-outline-secondary {{ 'active' if view_mode == 'list' else '' }}"><i class="fas fa-list"></i> List</a>
+                    <a href="{{ url_for('atv.parts_list', view_mode='table') }}" class="btn btn-outline-secondary {{ 'active' if view_mode == 'table' else '' }}"><i class="fas fa-table"></i> Table</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <!-- Tote Filter -->
+                <div class="col-md-4">
+                    <label class="form-label">Tote</label>
+                    <div class="d-flex flex-wrap">
+                        <a href="{{ url_for('atv.parts_list', view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if not tote else 'btn-outline-secondary' }} me-1 mb-1">All</a>
+                        {% for t in totes %}
+                            {% if t %}
+                                <a href="{{ url_for('atv.parts_list', tote=t, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if tote == t else 'btn-outline-secondary' }} me-1 mb-1">{{ t }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        <a href="{{ url_for('atv.parts_list', tote='none', view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if tote == 'none' else 'btn-outline-secondary' }} me-1 mb-1">No Tote</a>
+                    </div>
+                </div>
+                <!-- Status Filter -->
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <div class="d-flex flex-wrap">
+                        <a href="{{ url_for('atv.parts_list', tote=tote, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if not status else 'btn-outline-secondary' }} me-1 mb-1">
+                            All ({{ totals.total }})
+                        </a>
+                        <a href="{{ url_for('atv.parts_list', status='in_stock', tote=tote, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if status == 'in_stock' else 'btn-outline-secondary' }} me-1 mb-1">
+                            In Stock ({{ totals.in_stock }})
+                        </a>
+                        <a href="{{ url_for('atv.parts_list', status='sold', tote=tote, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if status == 'sold' else 'btn-outline-secondary' }} me-1 mb-1">
+                            Sold ({{ totals.sold }})
+                        </a>
+                        <a href="{{ url_for('atv.parts_list', status='listed', tote=tote, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if status == 'listed' else 'btn-outline-secondary' }} me-1 mb-1">
+                            Listed ({{ totals.listed }})
+                        </a>
+                    </div>
+                </div>
+                <!-- Sort Order -->
+                <div class="col-md-4">
+                    <label class="form-label">Sort By</label>
+                    <select id="sort-by" class="form-select" onchange="changeSortOrder(this.value);">
+                        <option value="name_asc" {{ 'selected' if sort_by == 'name_asc' else '' }}>Name (A-Z)</option>
+                        <option value="name_desc" {{ 'selected' if sort_by == 'name_desc' else '' }}>Name (Z-A)</option>
+                        <option value="price_asc" {{ 'selected' if sort_by == 'price_asc' else '' }}>Price (Low-High)</option>
+                        <option value="price_desc" {{ 'selected' if sort_by == 'price_desc' else '' }}>Price (High-Low)</option>
+                        <option value="newest" {{ 'selected' if sort_by == 'newest' else '' }}>Newest First</option>
+                        <option value="oldest" {{ 'selected' if sort_by == 'oldest' else '' }}>Oldest First</option>
+                        <option value="tote" {{ 'selected' if sort_by == 'tote' else '' }}>Tote</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Second row filters for ATV filtering -->
+            <div class="row mt-3">
+                <div class="col-md-8">
+                    <label class="form-label">ATV</label>
+                    <div class="d-flex flex-wrap">
+                        <a href="{{ url_for('atv.parts_list', tote=tote, status=status, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if not atv_id else 'btn-outline-secondary' }} me-1 mb-1">All ATVs</a>
+                        <a href="{{ url_for('atv.parts_list', atv_id='none', tote=tote, status=status, view_mode=view_mode) }}" class="btn btn-sm {{ 'btn-primary' if atv_id == 'none' else 'btn-outline-secondary' }} me-1 mb-1">Unassigned</a>
+                    </div>
+                </div>
+                
+                <!-- Toggle search -->
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#searchCollapse">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Collapsible Search -->
+            <div class="collapse mt-3" id="searchCollapse">
+                <form method="GET" action="{{ url_for('atv.parts_list') }}">
+                    <input type="hidden" name="view_mode" value="{{ view_mode }}">
+                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                    <input type="hidden" name="tote" value="{{ tote }}">
+                    <input type="hidden" name="status" value="{{ status }}">
+                    <input type="hidden" name="atv_id" value="{{ atv_id }}">
+                    
+                    <div class="input-group">
+                        <input type="text" name="query" class="form-control" placeholder="Search part name, description..." value="{{ query }}">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Parts List/Grid/Table Views -->
+    {% if parts %}
+        {% if view_mode == 'grid' %}
+            <!-- Grid View -->
+            <div class="row">
+                {% for part in parts %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 part-card" data-part-id="{{ part.id }}">
+                        {% if part.images.first() %}
+                        <a href="{{ url_for('atv.view_part', id=part.id) }}">
+                            <img src="{{ url_for('static', filename='uploads/' + part.images.first().filename) }}" class="card-img-top" alt="{{ part.name }}">
+                        </a>
+                        {% endif %}
+                        <div class="card-body pb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title mb-1">{{ part.name }}</h5>
+                                <span class="badge {% if part.status == 'in_stock' %}bg-primary{% elif part.status == 'sold' %}bg-success{% elif part.status == 'listed' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ part.status|replace('_', ' ')|title }}
+                                </span>
+                            </div>
+                            <p class="card-text text-muted small mb-1">
+                                {% if part.condition %}
+                                <span class="me-2">{{ part.condition|replace('_', ' ')|title }}</span>
+                                {% endif %}
+                                {% if part.tote %}
+                                <span class="badge bg-secondary me-1">{{ part.tote }}</span>
+                                {% endif %}
+                            </p>
+                            <p class="card-text mb-1"><strong>${{ "%.2f"|format(part.list_price or 0) }}</strong></p>
+                            <p class="card-text small mb-2">
+                                {% if part.atv %}
+                                From: {{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}
+                                {% else %}
+                                <span class="text-muted">No ATV assigned</span>
+                                {% endif %}
+                            </p>
+                            <div class="part-actions d-flex gap-1">
+                                <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                <button class="btn btn-sm btn-outline-secondary quick-edit-btn" data-part-id="{{ part.id }}">
+                                    <i class="fas fa-edit"></i> Quick Edit
+                                </button>
+                            </div>
+                            <div class="quick-edit-container d-none mt-2" id="quick-edit-{{ part.id }}"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% elif view_mode == 'table' %}
+            <!-- Table View -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ATV</th>
+                            <th>Condition</th>
+                            <th>Tote</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr class="part-row" data-part-id="{{ part.id }}">
+                            <td>
+                                <a href="{{ url_for('atv.view_part', id=part.id) }}">{{ part.name }}</a>
+                                {% if part.part_number %}
+                                <br><small class="text-muted">{{ part.part_number }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if part.atv %}
+                                <a href="{{ url_for('atv.view_atv', id=part.atv.id) }}">{{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</a>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ part.condition|replace('_', ' ')|title if part.condition else 'N/A' }}</td>
+                            <td>{% if part.tote %}<span class="badge bg-secondary">{{ part.tote }}</span>{% else %}-{% endif %}</td>
+                            <td>${{ "%.2f"|format(part.list_price or 0) }}</td>
+                            <td>
+                                <span class="badge {% if part.status == 'in_stock' %}bg-primary{% elif part.status == 'sold' %}bg-success{% elif part.status == 'listed' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ part.status|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-outline-primary">View</a>
+                                    <button class="btn btn-outline-secondary quick-edit-btn" data-part-id="{{ part.id }}">Quick Edit</button>
+                                </div>
+                                <div class="quick-edit-container d-none mt-2" id="quick-edit-{{ part.id }}"></div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- List View (Default) -->
+            <div class="list-group">
+                {% for part in parts %}
+                <div class="list-group-item part-item" data-part-id="{{ part.id }}">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                {% if part.images.first() %}
+                                <div class="me-3" style="width: 60px; height: 60px;">
+                                    <a href="{{ url_for('atv.view_part', id=part.id) }}">
+                                        <img src="{{ url_for('static', filename='uploads/' + part.images.first().filename) }}" class="img-thumbnail" style="width: 100%; height: 100%; object-fit: cover;" alt="{{ part.name }}">
+                                    </a>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <h5 class="mb-1">
+                                        <a href="{{ url_for('atv.view_part', id=part.id) }}" class="text-decoration-none">{{ part.name }}</a>
+                                        <span class="badge {% if part.status == 'in_stock' %}bg-primary{% elif part.status == 'sold' %}bg-success{% elif part.status == 'listed' %}bg-info{% else %}bg-secondary{% endif %} ms-2">
+                                            {{ part.status|replace('_', ' ')|title }}
+                                        </span>
+                                    </h5>
+                                    <div class="small text-muted">
+                                        {% if part.condition %}
+                                        <span class="me-2">Condition: {{ part.condition|replace('_', ' ')|title }}</span>
+                                        {% endif %}
+                                        {% if part.tote %}
+                                        <span class="badge bg-secondary me-1">{{ part.tote }}</span>
+                                        {% endif %}
+                                        {% if part.atv %}
+                                        <span>From: <a href="{{ url_for('atv.view_atv', id=part.atv.id) }}">{{ part.atv.year }} {{ part.atv.make }} {{ part.atv.model }}</a></span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-md-center">
+                            <span class="fw-bold">${{ "%.2f"|format(part.list_price or 0) }}</span>
+                        </div>
+                        <div class="col-md-2 text-md-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('atv.view_part', id=part.id) }}" class="btn btn-outline-primary">View</a>
+                                <button class="btn btn-outline-secondary quick-edit-btn" data-part-id="{{ part.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                            <div class="quick-edit-container d-none mt-2" id="quick-edit-{{ part.id }}"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> No parts found matching your criteria.
+            {% if query %}
+            <a href="{{ url_for('atv.parts_list') }}" class="alert-link">Clear search</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Handle sort order changes
+    function changeSortOrder(sortValue) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort_by', sortValue);
+        window.location.href = currentUrl.toString();
+    }
+    
+    // Quick edit functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle quick edit button clicks
+        document.querySelectorAll('.quick-edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const partId = this.getAttribute('data-part-id');
+                const container = document.getElementById(`quick-edit-${partId}`);
+                
+                // If form is already loaded, just toggle visibility
+                if (container.innerHTML.trim()) {
+                    container.classList.toggle('d-none');
+                    return;
+                }
+                
+                // Otherwise, fetch the form via AJAX
+                container.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Loading...</div>';
+                container.classList.remove('d-none');
+                
+                fetch(`/atv/quick_edit_part/${partId}?ajax=true`)
+                    .then(response => response.text())
+                    .then(html => {
+                        container.innerHTML = html;
+                        
+                        // Setup form submission
+                        const form = container.querySelector('form');
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            
+                            const formData = new FormData(form);
+                            fetch(form.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Show success message
+                                    const alert = document.createElement('div');
+                                    alert.className = 'alert alert-success mt-2';
+                                    alert.innerHTML = 'Part updated successfully!';
+                                    container.appendChild(alert);
+                                    
+                                    // Hide the alert after 2 seconds
+                                    setTimeout(() => {
+                                        alert.remove();
+                                        container.classList.add('d-none');
+                                        // Optionally refresh the page to show updated data
+                                        window.location.reload();
+                                    }, 1500);
+                                } else {
+                                    // Show validation errors
+                                    Object.keys(data.errors).forEach(field => {
+                                        const errorElement = container.querySelector(`#${field}-error`);
+                                        if (errorElement) {
+                                            errorElement.textContent = data.errors[field][0];
+                                            errorElement.parentElement.querySelector('.form-control').classList.add('is-invalid');
+                                        }
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                container.innerHTML += '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+                            });
+                        });
+                        
+                        // Setup cancel button
+                        container.querySelectorAll('.cancel-edit').forEach(cancelBtn => {
+                            cancelBtn.addEventListener('click', function() {
+                                container.classList.add('d-none');
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        container.innerHTML = '<div class="alert alert-danger">Failed to load edit form.</div>';
+                    });
+            });
+        });
+    });
+</script>
+{% endblock %}

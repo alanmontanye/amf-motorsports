@@ -15,8 +15,13 @@ class ATVForm(FlaskForm):
     vin = StringField('VIN')
     status = SelectField('Status', choices=[
         ('active', 'Active'), 
-        ('sold', 'Sold'), 
-        ('parting_out', 'Parting Out')
+        ('sold', 'Sold'),
+        ('scrapped', 'Scrapped')
+    ], validators=[DataRequired()])
+    parting_status = SelectField('Parting Status', choices=[
+        ('whole', 'Whole Machine'),
+        ('parting_out', 'Currently Parting Out'),
+        ('parted_out', 'Completely Parted Out')
     ], validators=[DataRequired()])
     purchase_date = DateField('Purchase Date', validators=[DataRequired()])
     purchase_price = FloatField('Purchase Price', validators=[DataRequired(), NumberRange(min=0)])
@@ -71,13 +76,18 @@ class PartForm(FlaskForm):
     ])
     storage_id = SelectField('Storage Location', coerce=int, validators=[Optional()])
     location = StringField('Legacy Storage Location', validators=[Optional(), Length(max=64)])
+    tote = StringField('Tote ID', validators=[Optional(), Length(max=20)], 
+                     description='Tote identifier (e.g., TOTE_A2)')
     status = SelectField('Status', choices=[
         ('in_stock', 'In Stock'),
         ('listed', 'Listed'),
+        ('reserved', 'Reserved'),
         ('sold', 'Sold')
     ])
     source_price = FloatField('Individual Purchase Cost ($)', validators=[Optional(), NumberRange(min=0)],
                             description='Only for individually purchased parts. Leave at $0 for parts from complete ATVs.')
+    estimated_value = FloatField('Estimated Value ($)', validators=[Optional(), NumberRange(min=0)],
+                               description='Value estimated from market research or ROI script')
     list_price = FloatField('List Price ($)', validators=[Optional(), NumberRange(min=0)])
     sold_price = FloatField('Sold Price ($)', validators=[Optional(), NumberRange(min=0)])
     sold_date = DateField('Sold Date', validators=[Optional()])
@@ -90,7 +100,10 @@ class PartForm(FlaskForm):
         ('local', 'Local/In-Person'),
         ('other', 'Other')
     ])
+    listing_id = StringField('Listing ID', validators=[Optional(), Length(max=128)],
+                           description='External listing ID (e.g., eBay item number)')
     listing_url = URLField('Listing URL', validators=[Optional(), URL()])
+    listing_date = DateField('Listing Date', validators=[Optional()])
     description = TextAreaField('Description', validators=[Optional(), Length(max=500)])
 
 class ImageUploadForm(FlaskForm):
@@ -108,5 +121,34 @@ class ImageUploadForm(FlaskForm):
         ('side', 'Side View'),
         ('engine', 'Engine'),
         ('parts', 'Parts Photo'),
+        ('part_detail', 'Part Detail'),
         ('other', 'Other')
     ])
+
+
+class BulkPartForm(FlaskForm):
+    """Form for adding multiple parts at once"""
+    atv_id = SelectField('ATV', coerce=int, validators=[DataRequired()])
+    tote = StringField('Tote ID', validators=[Optional(), Length(max=20)])
+    storage_id = SelectField('Storage Location', coerce=int, validators=[Optional()])
+    submit = SubmitField('Save All Parts')
+
+
+class QuickEditPartForm(FlaskForm):
+    """Simplified form for quick inline editing"""
+    name = StringField('Name', validators=[DataRequired(), Length(max=128)])
+    condition = SelectField('Condition', choices=[
+        ('new', 'New'),
+        ('used_good', 'Used - Good'),
+        ('used_fair', 'Used - Fair'),
+        ('used_poor', 'Used - Poor')
+    ])
+    status = SelectField('Status', choices=[
+        ('in_stock', 'In Stock'),
+        ('listed', 'Listed'),
+        ('reserved', 'Reserved'),
+        ('sold', 'Sold')
+    ])
+    tote = StringField('Tote')
+    list_price = FloatField('Price', validators=[Optional(), NumberRange(min=0)])
+    submit = SubmitField('Update')

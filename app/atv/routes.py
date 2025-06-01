@@ -13,8 +13,59 @@ import uuid
 
 @bp.route('/')
 def index():
-    atvs = ATV.query.filter(ATV.status != 'deleted').order_by(ATV.created_at.desc()).all()
-    return render_template('atv/index.html', title='ATVs', atvs=atvs)
+    # Get filter parameters
+    parting_status = request.args.get('parting_status', '')
+    status = request.args.get('status', '')
+    sort_by = request.args.get('sort_by', 'newest')
+    view_mode = request.args.get('view_mode', 'compact')
+    
+    # Base query
+    query = ATV.query.filter(ATV.status != 'deleted')
+    
+    # Apply filters
+    if parting_status:
+        query = query.filter(ATV.parting_status == parting_status)
+    if status:
+        query = query.filter(ATV.status == status)
+    
+    # Apply sorting
+    if sort_by == 'newest':
+        query = query.order_by(ATV.created_at.desc())
+    elif sort_by == 'oldest':
+        query = query.order_by(ATV.created_at.asc())
+    elif sort_by == 'make_asc':
+        query = query.order_by(ATV.make.asc(), ATV.model.asc())
+    elif sort_by == 'make_desc':
+        query = query.order_by(ATV.make.desc(), ATV.model.desc())
+    elif sort_by == 'year_asc':
+        query = query.order_by(ATV.year.asc())
+    elif sort_by == 'year_desc':
+        query = query.order_by(ATV.year.desc())
+    elif sort_by == 'profit':
+        # We can't sort directly by the profit property since it's calculated
+        # We'll sort by total_earnings as a proxy
+        query = query.order_by(ATV.total_earnings.desc())
+    
+    # Execute query
+    atvs = query.all()
+    
+    # Calculate parting status counts for filters
+    status_counts = {
+        'whole': ATV.query.filter(ATV.parting_status == 'whole').count(),
+        'parting_out': ATV.query.filter(ATV.parting_status == 'parting_out').count(),
+        'parted_out': ATV.query.filter(ATV.parting_status == 'parted_out').count(),
+    }
+    
+    return render_template(
+        'atv/index.html', 
+        title='ATVs', 
+        atvs=atvs,
+        parting_status=parting_status,
+        status=status,
+        sort_by=sort_by,
+        view_mode=view_mode,
+        status_counts=status_counts
+    )
 
 @bp.route('/add', methods=['GET', 'POST'])
 def add_atv():

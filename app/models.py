@@ -39,12 +39,14 @@ class ATV(db.Model):
     model = db.Column(db.String(100), nullable=False)
     year = db.Column(db.Integer, nullable=False)
     vin = db.Column(db.String(50))
-    status = db.Column(db.String(20), default='active')
+    status = db.Column(db.String(20), default='active')  # General status: active, sold, scrapped, etc.
+    parting_status = db.Column(db.String(20), default='whole')  # Parting status: whole, parting_out, parted_out
     purchase_date = db.Column(db.Date)
     purchase_price = db.Column(db.Float, default=0)
     purchase_location = db.Column(db.String(100))
     description = db.Column(db.Text)
     total_earnings = db.Column(db.Float, default=0)
+    machine_id = db.Column(db.String(64))  # Slug-style or UUID for machine identification
     
     # Hours tracking fields as database columns
     acquisition_hours = db.Column(db.Float, default=0)
@@ -72,6 +74,13 @@ class ATV(db.Model):
             self.selling_hours = 0
         if self.total_hours is None:
             self.total_hours = 0
+        # Set default parting status if not provided
+        if self.parting_status is None:
+            self.parting_status = 'whole'
+        # Generate a machine_id if not provided
+        if self.machine_id is None:
+            import uuid
+            self.machine_id = str(uuid.uuid4())
         # Update total hours when initializing
         self.update_total_hours()
     
@@ -126,24 +135,33 @@ class Part(db.Model):
     name = db.Column(db.String(128), nullable=False)
     part_number = db.Column(db.String(64))
     condition = db.Column(db.String(20))
-    location = db.Column(db.String(64))
-    status = db.Column(db.String(20), default='in_stock')  # in_stock, listed, sold
-    storage_id = db.Column(db.Integer, db.ForeignKey('storage.id'))
-    atv_id = db.Column(db.Integer, db.ForeignKey('atv.id'), nullable=False)
-    source_price = db.Column(db.Float, default=0)
+    location = db.Column(db.String(64))  # Traditional location reference
+    tote = db.Column(db.String(20))      # Tote identifier (e.g., TOTE_A2)
+    description = db.Column(db.Text)
+    source_price = db.Column(db.Float)
     list_price = db.Column(db.Float)
+    status = db.Column(db.String(20), default='in_stock')  # in_stock, sold, reserved, listed
+    platform = db.Column(db.String(32))  # ebay, facebook, etc.
+    
+    # Sales data
     sold_price = db.Column(db.Float)
-    sold_date = db.Column(db.Date)
+    sold_date = db.Column(db.DateTime)
     shipping_cost = db.Column(db.Float)
     platform_fees = db.Column(db.Float)
-    platform = db.Column(db.String(20))
-    listing_url = db.Column(db.String(256))
-    description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    estimated_value = db.Column(db.Float)  # For ROI calculations/auto-generated values
     
-    storage = db.relationship('Storage', backref=db.backref('parts', lazy='dynamic'))
-    images = db.relationship('Image', backref='part', lazy='dynamic', cascade="all, delete-orphan")
+    # Listing info
+    listing_id = db.Column(db.String(128))  # External listing ID (e.g., eBay item ID)
+    listing_url = db.Column(db.String(256))  # URL to the listing
+    listing_date = db.Column(db.DateTime)    # When the item was listed
+    
+    # Foreign keys
+    atv_id = db.Column(db.Integer, db.ForeignKey('atv.id'))
+    storage_id = db.Column(db.Integer, db.ForeignKey('storage.id'))
+    
+    # Relationships
+    images = db.relationship('Image', backref='part', lazy='dynamic', cascade='all, delete-orphan')
+    storage = db.relationship('Storage', backref='parts', lazy=True)
     ebay_listings = db.relationship('EbayListing', backref='part', lazy='dynamic', cascade="all, delete-orphan")
     
     def net_profit(self):

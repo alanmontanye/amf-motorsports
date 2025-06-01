@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>{{ title }}</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Bulk Part Addition</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.atv_id.label(class="form-label") }}
+                            {{ form.atv_id(class="form-control") }}
+                            {% if form.atv_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.atv_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {{ form.tote.label(class="form-label") }}
+                            {{ form.tote(class="form-control", placeholder="e.g. TOTE_A1") }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {{ form.storage_id.label(class="form-label") }}
+                            {{ form.storage_id(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> All parts will be added to the selected ATV with the same tote location and storage location.
+                </div>
+                
+                <h5 class="mb-3 mt-4">Add Parts</h5>
+                <div id="part-container">
+                    <!-- Dynamic part rows will be added here -->
+                    <div class="part-row row mb-2">
+                        <div class="col-md-5">
+                            <input type="text" name="part_name[]" class="form-control" placeholder="Part Name" required>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="part_condition[]" class="form-control">
+                                <option value="new">New</option>
+                                <option value="used_good" selected>Used - Good</option>
+                                <option value="used_fair">Used - Fair</option>
+                                <option value="used_poor">Used - Poor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="part_price[]" class="form-control" placeholder="Price" step="0.01">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="part_description[]" class="form-control" placeholder="Description (optional)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3 mb-4">
+                    <div class="col-12">
+                        <button type="button" id="add-part-row" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-plus"></i> Add Another Part
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('atv.parts_list') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const partContainer = document.getElementById('part-container');
+        const addRowButton = document.getElementById('add-part-row');
+        
+        addRowButton.addEventListener('click', function() {
+            const newRow = document.createElement('div');
+            newRow.className = 'part-row row mb-2';
+            newRow.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" name="part_name[]" class="form-control" placeholder="Part Name" required>
+                </div>
+                <div class="col-md-2">
+                    <select name="part_condition[]" class="form-control">
+                        <option value="new">New</option>
+                        <option value="used_good" selected>Used - Good</option>
+                        <option value="used_fair">Used - Fair</option>
+                        <option value="used_poor">Used - Poor</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" name="part_price[]" class="form-control" placeholder="Price" step="0.01">
+                </div>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <input type="text" name="part_description[]" class="form-control" placeholder="Description (optional)">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-outline-danger remove-row">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            partContainer.appendChild(newRow);
+            
+            // Add remove functionality to the new row
+            newRow.querySelector('.remove-row').addEventListener('click', function() {
+                partContainer.removeChild(newRow);
+            });
+        });
+    });
+</script>
+{% endblock %}
