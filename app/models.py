@@ -423,3 +423,72 @@ class EbayHistoricalPrice(db.Model):
     
     def __repr__(self):
         return f'<EbayHistoricalPrice {self.title}>'
+
+class EbayOrder(db.Model):
+    """Model for tracking eBay orders (alternative to EbayOrderSync for compatibility)"""
+    id = db.Column(db.Integer, primary_key=True)
+    ebay_order_id = db.Column(db.String(128), nullable=False, unique=True)
+    
+    # Order details
+    buyer_username = db.Column(db.String(128))
+    order_total = db.Column(db.Float)
+    order_status = db.Column(db.String(20))
+    payment_status = db.Column(db.String(20))
+    shipping_status = db.Column(db.String(20))
+    
+    # Dates
+    order_date = db.Column(db.DateTime)
+    payment_date = db.Column(db.DateTime)
+    shipped_date = db.Column(db.DateTime)
+    
+    # Address and shipping
+    shipping_address = db.Column(db.Text)  # JSON string
+    tracking_number = db.Column(db.String(64))
+    carrier = db.Column(db.String(64))
+    
+    # Processing
+    is_processed = db.Column(db.Boolean, default=False)
+    processing_notes = db.Column(db.Text)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    order_items = db.relationship('EbayOrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<EbayOrder {self.ebay_order_id}>'
+
+class EbayOrderItem(db.Model):
+    """Model for individual items within an eBay order"""
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('ebay_order.id'), nullable=False)
+    
+    # Item details
+    ebay_item_id = db.Column(db.String(128))
+    listing_id = db.Column(db.Integer, db.ForeignKey('ebay_listing.id'))
+    title = db.Column(db.String(256))
+    
+    # Pricing
+    item_price = db.Column(db.Float)
+    quantity = db.Column(db.Integer, default=1)
+    shipping_cost = db.Column(db.Float)
+    total_cost = db.Column(db.Float)
+    
+    # eBay fees
+    final_value_fee = db.Column(db.Float)
+    payment_processing_fee = db.Column(db.Float)
+    listing_fee = db.Column(db.Float)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    listing = db.relationship('EbayListing', backref='order_items', lazy=True)
+    
+    def calculate_net_profit(self):
+        """Calculate net profit after all fees"""
+        total_fees = (self.final_value_fee or 0) + (self.payment_processing_fee or 0) + (self.listing_fee or 0)
+        return (self.total_cost or 0) - total_fees
+    
+    def __repr__(self):
+        return f'<EbayOrderItem {self.title}>'

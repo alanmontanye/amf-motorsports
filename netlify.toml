@@ -1,0 +1,11 @@
+[build]
+  publish = "dist"
+  command = "echo 'No build needed for Flask app'"
+
+[build.environment]
+  PYTHON_VERSION = "3.12"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200

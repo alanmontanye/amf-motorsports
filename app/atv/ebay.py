@@ -8,70 +8,7 @@ from datetime import datetime
 import json
 import calendar
 import logging
-
-@bp.route('/ebay/dashboard')
-def ebay_dashboard():
-    """eBay dashboard showing all listings"""
-    # Get filter parameters
-    atv_id = request.args.get('atv_id', None, type=int)
-    
-    # Get ATVs for filter dropdown
-    atvs = ATV.query.order_by(ATV.year.desc(), ATV.make, ATV.model).all()
-    
-    # Get active listings
-    active_listings_query = EbayListing.query.filter(EbayListing.status.in_(['active', 'pending']))
-    active_listings = active_listings_query.all()
-    active_count = len(active_listings)
-    active_value = sum(listing.price for listing in active_listings)
-    
-    # Split into active and pending
-    pending_listings = [l for l in active_listings if l.status == 'pending']
-    active_listings = [l for l in active_listings if l.status == 'active']
-    pending_count = len(pending_listings)
-    
-    # Get sold listings
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-    
-    sold_listings_query = EbayListing.query.filter(EbayListing.status == 'sold')
-    sold_listings_query = sold_listings_query.filter(
-        db.extract('year', EbayListing.updated_at) == current_year,
-        db.extract('month', EbayListing.updated_at) == current_month
-    )
-    sold_listings = sold_listings_query.all()
-    sold_count = len(sold_listings)
-    
-    # Calculate total revenue from sold items
-    sold_revenue = 0
-    for listing in sold_listings:
-        part = Part.query.get(listing.part_id)
-        if part and part.sold_price:
-            sold_revenue += part.sold_price
-    
-    # Get parts eligible for eBay listing
-    eligible_parts_query = Part.query.filter(Part.status == 'in_stock')
-    
-    # Apply ATV filter if specified
-    if atv_id:
-        eligible_parts_query = eligible_parts_query.filter(Part.atv_id == atv_id)
-    
-    eligible_parts = eligible_parts_query.all()
-    
-    # Filter out parts that are already on eBay
-    eligible_parts = [p for p in eligible_parts if not p.is_on_ebay()]
-    
-    return render_template('atv/ebay/dashboard.html',
-                          title='eBay Dashboard',
-                          active_listings=active_listings,
-                          pending_listings=pending_listings,
-                          sold_listings=sold_listings,
-                          active_count=active_count,
-                          pending_count=pending_count,
-                          sold_count=sold_count,
-                          active_value=active_value,
-                          sold_revenue=sold_revenue,
-                          eligible_parts=eligible_parts,
-                          atvs=atvs)
+from app.atv.ebay_api import EbayListingManager
 
 @bp.route('/ebay/bulk-list', methods=['POST'])
 def bulk_list_on_ebay():
@@ -134,40 +71,6 @@ def bulk_list_on_ebay():
         flash(f'Skipped {skipped_count} parts that were not eligible for listing.', 'warning')
     
     return redirect(url_for('atv.ebay_dashboard'))
-
-@bp.route('/ebay/settings', methods=['GET', 'POST'])
-def ebay_settings():
-    """Manage eBay API settings"""
-    # Get existing credentials if any
-    credentials = EbayCredentials.query.first()
-    
-    if request.method == 'POST':
-        # Handle form submission
-        client_id = request.form.get('client_id')
-        client_secret = request.form.get('client_secret')
-        environment = request.form.get('environment', 'sandbox')
-        
-        if not credentials:
-            credentials = EbayCredentials()
-        
-        credentials.client_id = client_id
-        credentials.client_secret = client_secret
-        credentials.environment = environment
-        
-        # Save default policies
-        credentials.default_return_policy = request.form.get('return_policy', '30_days')
-        credentials.default_shipping_policy = request.form.get('shipping_policy', 'calculated')
-        credentials.default_payment_policy = request.form.get('payment_policy', 'immediate')
-        
-        db.session.add(credentials)
-        db.session.commit()
-        
-        flash('eBay settings updated successfully!', 'success')
-        return redirect(url_for('atv.ebay_dashboard'))
-    
-    return render_template('atv/ebay/settings.html',
-                          title='eBay Settings',
-                          credentials=credentials)
 
 @bp.route('/ebay/templates', methods=['GET'])
 def ebay_templates():

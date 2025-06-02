@@ -275,16 +275,52 @@ def generate_optimized_title(part):
     # Start with basic information
     title = f"{atv.year} {atv.make} {atv.model} {part.name}"
     
-    # Add part number if available
-    if part.part_number and len(title) + len(part.part_number) + 2 <= 80:
-        title += f" #{part.part_number}"
-    
-    # Add condition if there's room
-    if part.condition and len(title) + len(part.condition) + 1 <= 80:
-        title += f" {part.condition}"
-    
-    # Ensure we don't exceed 80 characters
+    # Truncate if too long
     if len(title) > 80:
         title = title[:77] + "..."
         
     return title
+
+class EbayAPI:
+    """Main eBay API interface class"""
+    
+    def __init__(self, environment='sandbox'):
+        """Initialize the eBay API interface"""
+        self.environment = environment
+        self.credentials = EbayCredentials.query.first()
+        
+    def authenticate(self):
+        """Handle eBay OAuth authentication"""
+        if not self.credentials:
+            return {"success": False, "error": "No credentials configured"}
+            
+        # Mock authentication for now
+        return {"success": True, "authenticated": True}
+    
+    def create_listing(self, listing_data):
+        """Create a new eBay listing"""
+        # Mock implementation - replace with actual eBay API calls
+        return {
+            "success": True,
+            "listing_id": f"mock_{datetime.now().timestamp()}"
+        }
+    
+    def update_listing(self, listing_id, update_data):
+        """Update an existing eBay listing"""
+        # Mock implementation
+        return {"success": True}
+    
+    def delete_listing(self, listing_id):
+        """End/delete an eBay listing"""
+        # Mock implementation
+        return {"success": True}
+    
+    def get_orders(self, days_back=30):
+        """Retrieve recent eBay orders"""
+        # Mock implementation
+        return {"success": True, "orders": []}
+    
+    def sync_order_status(self, order_id):
+        """Sync order status with eBay"""
+        # Mock implementation
+        return {"success": True}

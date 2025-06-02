@@ -1,5 +1,5 @@
 from app import create_app, db
-from app.models import User, ATV, Expense, Sale, Part, Image, EbayListing
+from app.models import ATV, Expense, Sale, Part, Image, EbayListing
 
 app = create_app()
 
@@ -7,7 +7,6 @@ app = create_app()
 def make_shell_context():
     return {
         'db': db,
-        'User': User,
         'ATV': ATV,
         'Expense': Expense,
         'Sale': Sale,

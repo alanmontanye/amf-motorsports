@@ -12,40 +12,6 @@ import logging
 # Configuration
 EBAY_REDIRECT_URI = "/atv/ebay/auth/callback"  # Will be expanded to full URL in the authorize route
 
-@bp.route('/ebay/settings', methods=['GET', 'POST'])
-def ebay_settings():
-    """Manage eBay API settings"""
-    # Get existing credentials if any
-    credentials = EbayCredentials.query.first()
-    
-    if request.method == 'POST':
-        # Handle form submission
-        client_id = request.form.get('client_id')
-        client_secret = request.form.get('client_secret')
-        environment = request.form.get('environment', 'sandbox')
-        
-        if not credentials:
-            credentials = EbayCredentials()
-        
-        credentials.client_id = client_id
-        credentials.client_secret = client_secret
-        credentials.environment = environment
-        
-        # Save default policies
-        credentials.default_return_policy = request.form.get('return_policy', '30_days')
-        credentials.default_shipping_policy = request.form.get('shipping_policy', 'calculated')
-        credentials.default_payment_policy = request.form.get('payment_policy', 'immediate')
-        
-        db.session.add(credentials)
-        db.session.commit()
-        
-        flash('eBay settings updated successfully!', 'success')
-        return redirect(url_for('atv.ebay_dashboard'))
-    
-    return render_template('atv/ebay/settings.html',
-                          title='eBay Settings',
-                          credentials=credentials)
-
 @bp.route('/ebay/auth/authorize')
 def ebay_authorize():
     """Redirect user to eBay for authorization"""
@@ -316,66 +282,6 @@ def update_part_price(part_id):
         db.session.rollback()
         flash(f'Error updating price: {str(e)}', 'error')
         return redirect(url_for('atv.view_part', id=part_id))
-
-@bp.route('/ebay/bulk-list', methods=['POST'])
-def bulk_list_on_ebay():
-    """Create eBay listings for multiple parts at once"""
-    part_ids = request.form.getlist('part_ids')
-    use_price_analysis = request.form.get('use_price_analysis') == 'on'
-    
-    if not part_ids:
-        flash('No parts selected for listing.', 'warning')
-        return redirect(url_for('atv.ebay_dashboard'))
-    
-    created_count = 0
-    priced_count = 0
-    skipped_count = 0
-    error_count = 0
-    
-    ebay_api = EbayAPI()
-    
-    for part_id in part_ids:
-        try:
-            part = Part.query.get(part_id)
-            
-            if not part or not part.can_list_on_ebay():
-                skipped_count += 1
-                continue
-            
-            # Auto-adjust price if requested
-            if use_price_analysis and ebay_api.credentials and ebay_api.credentials.is_active:
-                try:
-                    price_data = ebay_api.analyze_price(part.id)
-                    if price_data.get('success') and price_data.get('suggested_price'):
-                        # Only update if we have a valid suggested price
-                        part.list_price = price_data.get('suggested_price')
-                        db.session.add(part)
-                        db.session.commit()
-                        priced_count += 1
-                except Exception as e:
-                    logging.warning(f"Price analysis failed for part {part.id}: {str(e)}")
-            
-            # Create listing
-            ebay_api.list_part(part.id)
-            created_count += 1
-            
-        except Exception as e:
-            logging.error(f"Error listing part {part_id} on eBay: {str(e)}")
-            error_count += 1
-    
-    if created_count > 0:
-        flash(f'Successfully created {created_count} eBay listings.', 'success')
-    
-    if priced_count > 0:
-        flash(f'Updated prices for {priced_count} parts based on eBay market analysis.', 'info')
-    
-    if skipped_count > 0:
-        flash(f'Skipped {skipped_count} parts that were not eligible for listing.', 'warning')
-    
-    if error_count > 0:
-        flash(f'Failed to list {error_count} parts due to errors. Check the logs for details.', 'error')
-    
-    return redirect(url_for('atv.ebay_dashboard'))
 
 @bp.route('/ebay/order/<int:order_id>')
 def view_order(order_id):

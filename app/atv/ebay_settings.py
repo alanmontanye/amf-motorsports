@@ -90,56 +90,7 @@ def ebay_settings():
     
     return render_template(
         'atv/ebay_settings.html',
-        form=form,
-        settings=settings,
-        auth_link=auth_link
+        title='eBay Settings',
+        credentials=settings,
+        form=form
     )
-
-@bp.route('/ebay/authorize', methods=['GET'])
-def ebay_authorize():
-    """Handle eBay authorization callback"""
-    # This route will be called by eBay after user authorizes the app
-    code = request.args.get('code')
-    if not code:
-        flash('Authorization failed: No code received', 'danger')
-        return redirect(url_for('atv.ebay_settings'))
-    
-    # Exchange code for tokens
-    from app.atv.ebay_api import EbayAuthManager
-    token_response = EbayAuthManager.exchange_code_for_token(code)
-    
-    if not token_response or 'access_token' not in token_response:
-        flash('Failed to get access token', 'danger')
-        return redirect(url_for('atv.ebay_settings'))
-    
-    # Save tokens to database
-    settings = EbayCredentials.query.first()
-    if not settings:
-        flash('eBay settings not found', 'danger')
-        return redirect(url_for('atv.ebay_settings'))
-    
-    # Update tokens
-    settings.access_token = token_response['access_token']
-    settings.refresh_token = token_response.get('refresh_token')
-    
-    # Calculate token expiry
-    from datetime import datetime, timedelta
-    expires_in = token_response.get('expires_in', 7200)
-    settings.token_expiry = datetime.utcnow() + timedelta(seconds=expires_in)
-    
-    db.session.commit()
-    flash('eBay authorization successful', 'success')
-    return redirect(url_for('atv.ebay_settings'))
-
-@bp.route('/ebay/templates', methods=['GET'])
-def ebay_templates():
-    """Manage eBay listing templates"""
-    templates = EbayTemplate.query.all()
-    return render_template('atv/ebay_templates.html', templates=templates)
-
-@bp.route('/ebay/templates/create', methods=['GET', 'POST'])
-def create_ebay_template():
-    """Create a new eBay listing template"""
-    # To be implemented
-    flash('Template creation coming soon in future update', 'info')
-    return redirect(url_for('atv.ebay_templates'))
