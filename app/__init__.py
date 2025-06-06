@@ -5,9 +5,76 @@ from config import config
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from sqlalchemy import text, inspect
+from sqlalchemy.exc import SQLAlchemyError
 
 db = SQLAlchemy()
 migrate = Migrate()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def fix_database_schema(app):
+    """Add missing columns to database tables if they don't exist"""
+    logger.info("Checking database schema for missing columns...")
+    try:
+        with app.app_context():
+            # Get database inspector
+            inspector = inspect(db.engine)
+            
+            # Check if atv table exists
+            if 'atv' not in inspector.get_table_names():
+                logger.warning("'atv' table not found! Creating all tables...")
+                db.create_all()
+                logger.info("Tables created successfully")
+                return
+                
+            # Check atv table columns
+            columns = [column['name'] for column in inspector.get_columns('atv')]
+            logger.info(f"Found columns in atv table: {', '.join(columns)}")
+            
+            # Define required columns and their SQL definitions
+            required_columns = {
+                'status': "VARCHAR(20) DEFAULT 'active'",
+                'parting_status': "VARCHAR(20) DEFAULT 'whole'",
+                'machine_id': "VARCHAR(64)"
+            }
+            
+            # Add any missing columns
+            for column, definition in required_columns.items():
+                if column not in columns:
+                    logger.info(f"Adding missing column '{column}' to atv table")
+                    try:
+                        db.session.execute(text(f"ALTER TABLE atv ADD COLUMN {column} {definition}"))
+                        logger.info(f"Added '{column}' successfully")
+                    except SQLAlchemyError as e:
+                        logger.error(f"Error adding column '{column}': {str(e)}")
+            
+            # Check for NULL status values and update them
+            try:
+                result = db.session.execute(text("UPDATE atv SET status = 'active' WHERE status IS NULL"))
+                if result.rowcount > 0:
+                    logger.info(f"Updated {result.rowcount} ATVs with NULL status to 'active'")
+            except SQLAlchemyError as e:
+                logger.error(f"Error updating NULL statuses: {str(e)}")
+                
+            # Also check part table for condition column
+            if 'part' in inspector.get_table_names():
+                part_columns = [column['name'] for column in inspector.get_columns('part')]
+                if 'condition' not in part_columns:
+                    logger.info("Adding 'condition' column to part table")
+                    try:
+                        db.session.execute(text("ALTER TABLE part ADD COLUMN condition VARCHAR(20)"))
+                        logger.info("Added 'condition' column to part table successfully")
+                    except SQLAlchemyError as e:
+                        logger.error(f"Error adding 'condition' to part table: {str(e)}")
+            
+            # Commit all changes
+            db.session.commit()
+            logger.info("Database schema check and fix completed successfully")
+    except Exception as e:
+        logger.error(f"Unexpected error during schema fix: {str(e)}")
 
 def create_app(config_name=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -70,13 +137,15 @@ def create_app(config_name=None):
     from app import models
 
     with app.app_context():
-        # Create tables if they don't exist
+        logger.info("Initializing database schema...")
         db.create_all()
-        
-        # Add a global template context processor for date/time
-        @app.context_processor
-        def inject_now():
-            from datetime import datetime
-            return {'now': datetime.utcnow()}
+        fix_database_schema(app)
+        logger.info("Database initialization complete")
+    
+    # Add a global template context processor for date/time
+    @app.context_processor
+    def inject_now():
+        from datetime import datetime
+        return {'now': datetime.utcnow()}
 
     return app
