@@ -42,19 +42,23 @@ def parts_list():
     if tote:
         query = query.filter(Part.tote == tote)
 
-    # Apply sorting
-    if sort_by == 'newest':
-        query = query.order_by(Part.created_at.desc())
-    elif sort_by == 'price_asc':
-        query = query.order_by(Part.list_price.asc())
-    elif sort_by == 'price_desc':
-        query = query.order_by(Part.list_price.desc())
-    elif sort_by == 'name':
-        query = query.order_by(Part.name.asc())
-    elif sort_by == 'tote':
-        query = query.order_by(Part.tote.asc(), Part.name.asc())
-    elif sort_by == 'atv':
-        query = query.order_by(ATV.year.desc(), ATV.make.asc(), ATV.model.asc(), Part.name.asc())
+    # Apply sorting (default to name if other options fail)
+    try:
+        if sort_by == 'newest' and hasattr(Part, 'created_at'):
+            query = query.order_by(Part.created_at.desc())
+        elif sort_by == 'price_asc':
+            query = query.order_by(Part.list_price.asc())
+        elif sort_by == 'price_desc':
+            query = query.order_by(Part.list_price.desc())
+        elif sort_by == 'name' or sort_by == 'newest': # Use name as fallback for newest
+            query = query.order_by(Part.name.asc())
+        elif sort_by == 'atv':
+            query = query.order_by(ATV.year.desc(), ATV.make.asc(), ATV.model.asc(), Part.name.asc())
+        else:
+            query = query.order_by(Part.id.desc()) # Fallback to ID sorting
+    except Exception as e:
+        current_app.logger.error(f"Sorting error: {e}")
+        query = query.order_by(Part.id.desc()) # Ultimate fallback
 
     # Execute query
     parts = query.all()

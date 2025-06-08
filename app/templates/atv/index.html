@@ -95,8 +95,8 @@
                             <span>
                                 <strong>${{ "%.0f"|format(atv.purchase_price or 0) }}</strong> cost
                             </span>
-                            <span class="{% if atv.profit_loss() > 0 %}text-success{% else %}text-danger{% endif %}">
-                                <strong>${{ "%.0f"|format(atv.profit_loss() or 0) }}</strong> P/L
+                            <span class="text-muted">
+                                <strong>--</strong> P/L
                             </span>
                         </div>
                         <div class="d-flex flex-wrap gap-1 mt-2">

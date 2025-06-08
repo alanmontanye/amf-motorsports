@@ -154,6 +154,7 @@ class Part(db.Model):
     listing_id = db.Column(db.String(128))  # External listing ID (e.g., eBay item ID)
     listing_url = db.Column(db.String(256))  # URL to the listing
     listing_date = db.Column(db.DateTime)    # When the item was listed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Added missing created_at field
     
     # Foreign keys
     atv_id = db.Column(db.Integer, db.ForeignKey('atv.id'))
@@ -162,7 +163,6 @@ class Part(db.Model):
     # Relationships
     images = db.relationship('Image', backref='part', lazy='dynamic', cascade='all, delete-orphan')
     storage = db.relationship('Storage', backref='parts', lazy=True)
-    ebay_listings = db.relationship('EbayListing', backref='part', lazy='dynamic', cascade="all, delete-orphan")
     
     def net_profit(self):
         """Calculate the net profit for this part"""
