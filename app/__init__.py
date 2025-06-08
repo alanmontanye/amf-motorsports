@@ -29,49 +29,51 @@ def fix_database_schema(app):
                 db.create_all()
                 logger.info("Tables created successfully")
                 return
+            
+            # Each operation in a separate transaction for better reliability
+            # 1. Add missing columns to ATV table
+            with db.engine.begin() as connection:
+                # Check atv table columns
+                columns = [column['name'] for column in inspector.get_columns('atv')]
+                logger.info(f"Found columns in atv table: {', '.join(columns)}")
                 
-            # Check atv table columns
-            columns = [column['name'] for column in inspector.get_columns('atv')]
-            logger.info(f"Found columns in atv table: {', '.join(columns)}")
+                # Define required columns and their SQL definitions
+                required_columns = {
+                    'status': "VARCHAR(20) DEFAULT 'active'",
+                    'parting_status': "VARCHAR(20) DEFAULT 'whole'",
+                    'machine_id': "VARCHAR(64)"
+                }
+                
+                # Add any missing columns
+                for column, definition in required_columns.items():
+                    if column not in columns:
+                        try:
+                            logger.info(f"Adding missing column '{column}' to atv table")
+                            connection.execute(text(f"ALTER TABLE atv ADD COLUMN IF NOT EXISTS {column} {definition}"))
+                            logger.info(f"Added '{column}' successfully")
+                        except Exception as e:
+                            logger.error(f"Error adding column '{column}': {str(e)}")
             
-            # Define required columns and their SQL definitions
-            required_columns = {
-                'status': "VARCHAR(20) DEFAULT 'active'",
-                'parting_status': "VARCHAR(20) DEFAULT 'whole'",
-                'machine_id': "VARCHAR(64)"
-            }
-            
-            # Add any missing columns
-            for column, definition in required_columns.items():
-                if column not in columns:
-                    logger.info(f"Adding missing column '{column}' to atv table")
-                    try:
-                        db.session.execute(text(f"ALTER TABLE atv ADD COLUMN {column} {definition}"))
-                        logger.info(f"Added '{column}' successfully")
-                    except SQLAlchemyError as e:
-                        logger.error(f"Error adding column '{column}': {str(e)}")
-            
-            # Check for NULL status values and update them
-            try:
-                result = db.session.execute(text("UPDATE atv SET status = 'active' WHERE status IS NULL"))
-                if result.rowcount > 0:
+            # 2. Update NULL statuses in a separate transaction
+            with db.engine.begin() as connection:
+                try:
+                    result = connection.execute(text("UPDATE atv SET status = 'active' WHERE status IS NULL"))
                     logger.info(f"Updated {result.rowcount} ATVs with NULL status to 'active'")
-            except SQLAlchemyError as e:
-                logger.error(f"Error updating NULL statuses: {str(e)}")
-                
-            # Also check part table for condition column
+                except Exception as e:
+                    logger.error(f"Error updating NULL statuses: {str(e)}")
+                    
+            # 3. Check part table in a separate transaction
             if 'part' in inspector.get_table_names():
-                part_columns = [column['name'] for column in inspector.get_columns('part')]
-                if 'condition' not in part_columns:
-                    logger.info("Adding 'condition' column to part table")
-                    try:
-                        db.session.execute(text("ALTER TABLE part ADD COLUMN condition VARCHAR(20)"))
-                        logger.info("Added 'condition' column to part table successfully")
-                    except SQLAlchemyError as e:
-                        logger.error(f"Error adding 'condition' to part table: {str(e)}")
+                with db.engine.begin() as connection:
+                    part_columns = [column['name'] for column in inspector.get_columns('part')]
+                    if 'condition' not in part_columns:
+                        logger.info("Adding 'condition' column to part table")
+                        try:
+                            connection.execute(text("ALTER TABLE part ADD COLUMN IF NOT EXISTS condition VARCHAR(20)"))
+                            logger.info("Added 'condition' column to part table successfully")
+                        except Exception as e:
+                            logger.error(f"Error adding 'condition' to part table: {str(e)}")
             
-            # Commit all changes
-            db.session.commit()
             logger.info("Database schema check and fix completed successfully")
     except Exception as e:
         logger.error(f"Unexpected error during schema fix: {str(e)}")
