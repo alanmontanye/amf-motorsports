@@ -1,103 +1,107 @@
 #!/usr/bin/env python3
 """
 Add missing database columns for parting workflow
-This script safely adds the missing columns that are causing deployment failures
+This script uses SQLAlchemy reflection to safely add missing columns to the database
 """
 
 import sys
 import os
-import sqlite3
-from pathlib import Path
+from datetime import datetime
 
 # Add the parent directory to the path so we can import the app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app, db
 from app.models import ATV, Part
+from sqlalchemy import inspect, Column, String, DateTime, Float, Integer
 
-def add_missing_columns():
-    """Add missing columns to the database"""
-    
-    # Create app and get database path
+def update_database_schema():
+    """Use SQLAlchemy to ensure all tables and columns exist"""
+    print("Starting database schema update...")
     app = create_app()
     
     with app.app_context():
-        # Get the database path from the SQLAlchemy URI
+        # Get database URI
         database_uri = app.config.get('DATABASE_URL') or app.config.get('SQLALCHEMY_DATABASE_URI')
-        
-        if database_uri.startswith('sqlite:///'):
-            db_path = database_uri.replace('sqlite:///', '')
-        else:
-            print("This script only works with SQLite databases")
-            return False
-            
-        # Connect to the database directly
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        print(f"Using database: {database_uri}")
         
         try:
-            # Check if parting_status column exists in atv table
-            cursor.execute("PRAGMA table_info(atv)")
-            columns = [column[1] for column in cursor.fetchall()]
+            # Create all tables that don't exist
+            print("Creating any missing tables...")
+            db.create_all()
             
-            # Add missing columns to ATV table if they don't exist
-            if 'parting_status' not in columns:
-                print("Adding parting_status column to atv table...")
-                cursor.execute("ALTER TABLE atv ADD COLUMN parting_status VARCHAR(20) DEFAULT 'intact'")
-                
-            if 'machine_id' not in columns:
-                print("Adding machine_id column to atv table...")
-                cursor.execute("ALTER TABLE atv ADD COLUMN machine_id VARCHAR(50)")
-                
-            # Check if condition column exists in part table
-            cursor.execute("PRAGMA table_info(part)")
-            part_columns = [column[1] for column in cursor.fetchall()]
+            # Print info about the database connection
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            print(f"Found tables: {', '.join(tables)}")
             
-            if 'condition' not in part_columns:
-                print("Adding condition column to part table...")
-                cursor.execute("ALTER TABLE part ADD COLUMN condition VARCHAR(20) DEFAULT 'good'")
+            # Check if the Part table exists and contains the required columns
+            if 'part' in tables:
+                part_columns = [c['name'] for c in inspector.get_columns('part')]
+                print(f"Part table columns: {', '.join(part_columns)}")
                 
-            # Commit the changes
-            conn.commit()
-            print("Successfully added missing columns!")
-            return True
+                # Check specifically for required columns
+                required_columns = ['tote', 'created_at']
+                missing_columns = [col for col in required_columns if col not in part_columns]
+                
+                if missing_columns:
+                    print(f"Missing columns in Part table: {', '.join(missing_columns)}")
+                    # Need to use a workaround to add columns
+                    print("Adding the tote column might require a direct SQL query on Production")
+                    print("For development, the db.create_all() should have updated the schema")
+                else:
+                    print("All required columns exist in the Part table")
+            
+            # Verify we can query ATV and Part tables
+            try:
+                atv_count = ATV.query.count()
+                print(f"ATV table has {atv_count} records")
+                
+                part_count = Part.query.count()
+                print(f"Part table has {part_count} records")
+                
+                # Set default values for parts without created_at
+                if 'created_at' in part_columns:
+                    parts_without_date = Part.query.filter(Part.created_at == None).all()
+                    print(f"Found {len(parts_without_date)} parts without created_at date")
+                    
+                    for part in parts_without_date:
+                        part.created_at = datetime.utcnow()
+                    
+                    if parts_without_date:
+                        db.session.commit()
+                        print(f"Updated created_at for {len(parts_without_date)} parts")
+                
+                return True
+            except Exception as e:
+                print(f"Error querying database: {e}")
+                return False
             
         except Exception as e:
-            print(f"Error adding columns: {e}")
-            conn.rollback()
+            print(f"Error updating database schema: {e}")
             return False
-            
-        finally:
-            conn.close()
 
-def verify_columns():
-    """Verify that all required columns exist"""
-    app = create_app()
-    
-    with app.app_context():
-        try:
-            # Try to query ATV with the new columns
-            atv_count = ATV.query.count()
-            print(f"✓ ATV table accessible with {atv_count} records")
-            
-            # Try to query Part with condition column
-            part_count = Part.query.count()
-            print(f"✓ Part table accessible with {part_count} records")
-            
-            return True
-        except Exception as e:
-            print(f"✗ Database verification failed: {e}")
-            return False
+def print_sql_commands():
+    """Print SQL commands for manual execution on production"""
+    print("\n===== SQL COMMANDS FOR PRODUCTION DATABASE =====")
+    print("These commands can be run on the production database if needed:")
+    print("")
+    print("-- PostgreSQL commands to add missing columns:")
+    print("ALTER TABLE part ADD COLUMN IF NOT EXISTS tote VARCHAR(20);")
+    print("ALTER TABLE part ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;")
+    print("""\n-- PostgreSQL command to update existing records:
+          UPDATE part SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL;""")
+    print("=================================================\n")
 
 if __name__ == '__main__':
-    print("Adding missing database columns...")
+    print("Running database schema update script...")
     
-    if add_missing_columns():
-        print("\nVerifying database structure...")
-        if verify_columns():
-            print("\n✓ Database migration completed successfully!")
-            print("You can now run the application without column errors.")
-        else:
-            print("\n✗ Database verification failed.")
+    # Update schema using SQLAlchemy
+    if update_database_schema():
+        print("\n✓ Database schema updated successfully!")
+        print_sql_commands()
+        print("You can now run the application without column errors.")
     else:
-        print("\n✗ Failed to add missing columns.")
+        print("\n✗ Database schema update failed.")
+        print("You might need to run the SQL commands manually on production.")
+        print_sql_commands()

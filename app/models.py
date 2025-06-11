@@ -141,7 +141,7 @@ class Part(db.Model):
     source_price = db.Column(db.Float)
     list_price = db.Column(db.Float)
     status = db.Column(db.String(20), default='in_stock')  # in_stock, sold, reserved, listed
-    platform = db.Column(db.String(32))  # ebay, facebook, etc.
+    platform = db.Column(db.String(32))  # platform where sold/listed
     
     # Sales data
     sold_price = db.Column(db.Float)
@@ -151,7 +151,7 @@ class Part(db.Model):
     estimated_value = db.Column(db.Float)  # For ROI calculations/auto-generated values
     
     # Listing info
-    listing_id = db.Column(db.String(128))  # External listing ID (e.g., eBay item ID)
+    listing_id = db.Column(db.String(128))  # External listing ID 
     listing_url = db.Column(db.String(256))  # URL to the listing
     listing_date = db.Column(db.DateTime)    # When the item was listed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Added missing created_at field
@@ -175,24 +175,6 @@ class Part(db.Model):
         fees = self.platform_fees or 0
         
         return self.sold_price - cost_basis - shipping - fees
-        
-    def is_on_ebay(self):
-        """Check if this part is currently listed on eBay"""
-        return self.status == 'listed' and self.platform == 'ebay' and self.ebay_listings.count() > 0
-    
-    def get_active_ebay_listing(self):
-        """Get the active eBay listing for this part, if any"""
-        if not self.is_on_ebay():
-            return None
-        return self.ebay_listings.filter(EbayListing.status.in_(['pending', 'active'])).first()
-    
-    def can_list_on_ebay(self):
-        """Check if this part is eligible to be listed on eBay"""
-        return self.status in ['in_stock'] and not self.is_on_ebay()
-        
-    def can_remove_from_ebay(self):
-        """Check if this part can be removed from eBay"""
-        return self.is_on_ebay()
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -243,252 +225,12 @@ class Image(db.Model):
     def __repr__(self):
         return f"<Image {self.filename}>"
 
-class EbayListing(db.Model):
-    """Model for tracking eBay listings"""
-    id = db.Column(db.Integer, primary_key=True)
-    part_id = db.Column(db.Integer, db.ForeignKey('part.id'), nullable=False)
-    title = db.Column(db.String(80), nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    ebay_item_id = db.Column(db.String(128))  # eBay's item ID (for API integration)
-    status = db.Column(db.String(20), default='pending')  # pending, active, ended, sold
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # JSON field to store additional listing data
-    listing_data = db.Column(db.Text)  # Will store JSON
-    
-    def __repr__(self):
-        return f'<EbayListing {self.title}>'
+# eBay related models removed to simplify the application
 
-class EbayCredentials(db.Model):
-    """Model for storing eBay API credentials and tokens"""
-    id = db.Column(db.Integer, primary_key=True)
-    
-    # OAuth tokens
-    access_token = db.Column(db.String(2000))
-    refresh_token = db.Column(db.String(2000))
-    token_expiry = db.Column(db.DateTime)
-    
-    # Environment settings
-    environment = db.Column(db.String(20), default='sandbox')  # 'sandbox' or 'production'
-    
-    # Developer credentials (encrypted in production)
-    client_id = db.Column(db.String(256))
-    client_secret = db.Column(db.String(256))
-    
-    # User preferences
-    default_return_policy = db.Column(db.String(20), default='30_days')
-    default_shipping_policy = db.Column(db.String(20), default='calculated')
-    default_payment_policy = db.Column(db.String(20), default='immediate')
-    
-    # Integration status
-    is_active = db.Column(db.Boolean, default=False)
-    last_sync = db.Column(db.DateTime)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def is_token_valid(self):
-        """Check if the access token is still valid"""
-        if not self.access_token or not self.token_expiry:
-            return False
-        return datetime.utcnow() < self.token_expiry
-    
-    def __repr__(self):
-        return f'<EbayCredentials {self.environment}>'
+# EbayCredentials model removed
 
-class EbayCategory(db.Model):
-    """Model for storing eBay category information"""
-    id = db.Column(db.Integer, primary_key=True)
-    ebay_category_id = db.Column(db.String(20), nullable=False)
-    name = db.Column(db.String(128), nullable=False)
-    level = db.Column(db.Integer)
-    parent_id = db.Column(db.String(20))
-    
-    # Store the full category path for easier display
-    category_path = db.Column(db.String(512))
-    
-    # Is this a common category for ATV parts?
-    is_favorite = db.Column(db.Boolean, default=False)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<EbayCategory {self.name}>'
+# EbayCategory model removed
 
-class EbayTemplate(db.Model):
-    """Model for storing reusable eBay listing templates"""
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), nullable=False)
-    description = db.Column(db.Text)
-    
-    # HTML template with placeholders
-    html_content = db.Column(db.Text)
-    
-    # Default values and settings
-    default_category_id = db.Column(db.String(20))
-    default_shipping_options = db.Column(db.Text)  # JSON string
-    default_return_policy = db.Column(db.Text)  # JSON string
-    default_payment_policy = db.Column(db.Text)  # JSON string
-    
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def get_shipping_options(self):
-        """Convert shipping options JSON to dict"""
-        if not self.default_shipping_options:
-            return {}
-        try:
-            return json.loads(self.default_shipping_options)
-        except json.JSONDecodeError:
-            return {}
-    
-    def set_shipping_options(self, options_dict):
-        """Convert dict to JSON and store"""
-        self.default_shipping_options = json.dumps(options_dict)
-    
-    def __repr__(self):
-        return f'<EbayTemplate {self.name}>'
+# EbayTemplate model removed
 
-class EbayOrderSync(db.Model):
-    """Model for tracking eBay order synchronization"""
-    id = db.Column(db.Integer, primary_key=True)
-    ebay_order_id = db.Column(db.String(128), nullable=False, unique=True)
-    listing_id = db.Column(db.Integer, db.ForeignKey('ebay_listing.id'))
-    
-    # Order details from eBay
-    buyer_username = db.Column(db.String(128))
-    order_total = db.Column(db.Float)
-    order_status = db.Column(db.String(20))
-    payment_status = db.Column(db.String(20))
-    shipping_status = db.Column(db.String(20))
-    
-    # Address details
-    shipping_address = db.Column(db.Text)  # JSON string
-    
-    # Tracking information
-    tracking_number = db.Column(db.String(64))
-    carrier = db.Column(db.String(64))
-    
-    # Full order details
-    order_data = db.Column(db.Text)  # JSON string of complete order
-    
-    # Local processing status
-    is_processed = db.Column(db.Boolean, default=False)
-    processing_notes = db.Column(db.Text)
-    
-    order_date = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationship
-    listing = db.relationship('EbayListing', backref='orders', lazy=True)
-    
-    def get_order_data(self):
-        """Convert order data JSON to dict"""
-        if not self.order_data:
-            return {}
-        try:
-            return json.loads(self.order_data)
-        except json.JSONDecodeError:
-            return {}
-    
-    def __repr__(self):
-        return f'<EbayOrderSync {self.ebay_order_id}>'
-
-class EbayHistoricalPrice(db.Model):
-    """Model for storing historical price data from eBay"""
-    id = db.Column(db.Integer, primary_key=True)
-    
-    # Search criteria used
-    keywords = db.Column(db.String(256))
-    category_id = db.Column(db.String(20))
-    condition = db.Column(db.String(20))
-    
-    # Item details
-    ebay_item_id = db.Column(db.String(128))
-    title = db.Column(db.String(256))
-    sold_price = db.Column(db.Float)
-    shipping_cost = db.Column(db.Float)
-    total_price = db.Column(db.Float)
-    
-    # Dates
-    sold_date = db.Column(db.DateTime)
-    search_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    part_id = db.Column(db.Integer, db.ForeignKey('part.id'))
-    
-    def __repr__(self):
-        return f'<EbayHistoricalPrice {self.title}>'
-
-class EbayOrder(db.Model):
-    """Model for tracking eBay orders (alternative to EbayOrderSync for compatibility)"""
-    id = db.Column(db.Integer, primary_key=True)
-    ebay_order_id = db.Column(db.String(128), nullable=False, unique=True)
-    
-    # Order details
-    buyer_username = db.Column(db.String(128))
-    order_total = db.Column(db.Float)
-    order_status = db.Column(db.String(20))
-    payment_status = db.Column(db.String(20))
-    shipping_status = db.Column(db.String(20))
-    
-    # Dates
-    order_date = db.Column(db.DateTime)
-    payment_date = db.Column(db.DateTime)
-    shipped_date = db.Column(db.DateTime)
-    
-    # Address and shipping
-    shipping_address = db.Column(db.Text)  # JSON string
-    tracking_number = db.Column(db.String(64))
-    carrier = db.Column(db.String(64))
-    
-    # Processing
-    is_processed = db.Column(db.Boolean, default=False)
-    processing_notes = db.Column(db.Text)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    order_items = db.relationship('EbayOrderItem', backref='order', lazy='dynamic', cascade='all, delete-orphan')
-    
-    def __repr__(self):
-        return f'<EbayOrder {self.ebay_order_id}>'
-
-class EbayOrderItem(db.Model):
-    """Model for individual items within an eBay order"""
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('ebay_order.id'), nullable=False)
-    
-    # Item details
-    ebay_item_id = db.Column(db.String(128))
-    listing_id = db.Column(db.Integer, db.ForeignKey('ebay_listing.id'))
-    title = db.Column(db.String(256))
-    
-    # Pricing
-    item_price = db.Column(db.Float)
-    quantity = db.Column(db.Integer, default=1)
-    shipping_cost = db.Column(db.Float)
-    total_cost = db.Column(db.Float)
-    
-    # eBay fees
-    final_value_fee = db.Column(db.Float)
-    payment_processing_fee = db.Column(db.Float)
-    listing_fee = db.Column(db.Float)
-    
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    listing = db.relationship('EbayListing', backref='order_items', lazy=True)
-    
-    def calculate_net_profit(self):
-        """Calculate net profit after all fees"""
-        total_fees = (self.final_value_fee or 0) + (self.payment_processing_fee or 0) + (self.listing_fee or 0)
-        return (self.total_cost or 0) - total_fees
-    
-    def __repr__(self):
-        return f'<EbayOrderItem {self.title}>'
+# All eBay-related models removed to simplify the application

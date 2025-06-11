@@ -6,7 +6,7 @@ from app.models import ATV, Part, Image, Storage
 from app import db
 from app.atv.forms import PartForm
 from datetime import datetime
-from app.atv.ebay import bp as ebay_bp
+# eBay-related imports removed
 
 @bp.route('/parts')
 def parts_list():
@@ -453,11 +453,7 @@ def unsell_part(id):
     """Mark a part as unsold (back to in stock)"""
     part = Part.query.get_or_404(id)
     
-    # Find and update any associated listings
-    if part.platform == 'ebay':
-        for listing in part.ebay_listings:
-            if listing.status == 'sold':
-                listing.status = 'ended'
+    # eBay-specific code removed to simplify application
                 
     # Reset part sale data
     part.status = 'in_stock'

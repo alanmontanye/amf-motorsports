@@ -52,7 +52,6 @@ class SaleForm(FlaskForm):
     date = DateField('Date', validators=[DataRequired()])
     amount = FloatField('Sale Amount ($)', validators=[DataRequired(), NumberRange(min=0)])
     platform = SelectField('Platform', choices=[
-        ('ebay', 'eBay'),
         ('facebook', 'Facebook'),
         ('local', 'Local/In-Person'),
         ('other', 'Other')
@@ -95,7 +94,6 @@ class PartForm(FlaskForm):
     platform_fees = FloatField('Platform Fees ($)', validators=[Optional(), NumberRange(min=0)])
     platform = SelectField('Platform', choices=[
         ('', 'Not Listed'),
-        ('ebay', 'eBay'),
         ('facebook', 'Facebook'),
         ('local', 'Local/In-Person'),
         ('other', 'Other')

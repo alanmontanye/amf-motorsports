@@ -1,12 +1,12 @@
 """
-AI-powered description generator for eBay listings
+AI-powered description generator for parts listings
 """
 from flask import request, jsonify, render_template, redirect, url_for, flash, current_app
 from app.atv import bp
 from app.models import Part, ATV
 from app import db
 import openai
-from app.config.ebay_templates import format_ai_description
+# Removed eBay-specific imports
 import json
 
 def generate_part_description(part):
@@ -93,11 +93,12 @@ def generate_description(part_id):
         
         # Store in session for preview
         if isinstance(ai_description, str) and not ai_description.startswith("Error:"):
-            formatted_description = format_ai_description(part, ai_description)
-            return render_template('atv/ebay/preview_description.html', 
-                                  part=part, 
-                                  raw_description=ai_description,
-                                  formatted_description=formatted_description)
+            # Simplified to use raw description without eBay formatting
+            formatted_description = ai_description
+            return render_template('atv/parts/description_preview.html', 
+                                   part=part, 
+                                   raw_description=ai_description,
+                                   formatted_description=formatted_description)
         else:
             flash(ai_description, 'error')
             return redirect(url_for('atv.view_part', id=part_id))
@@ -123,9 +124,8 @@ def apply_description(part_id):
         return redirect(url_for('atv.view_part', id=part_id))
     
     try:
-        # Update the part with the new descriptions
+        # Update the part with the new description (removed eBay-specific field)
         part.description = raw_description
-        part.ebay_description = formatted_description
         db.session.commit()
         
         flash("AI description applied successfully!", 'success')
